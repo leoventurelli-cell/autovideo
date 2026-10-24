@@ -84,10 +84,62 @@ def _pedir_ao_gemini(prompt: str) -> dict:
     raise RuntimeError(f"Gemini não respondeu: {r.status_code} {r.text[:300]}")
 
 
+GROQ_URL = "https://api.groq.com/openai/v1"
+
+
+def _modelos_groq() -> list[str]:
+    r = requests.get(f"{GROQ_URL}/models", headers={"Authorization": f"Bearer {config.GROQ_API_KEY}"}, timeout=30)
+    r.raise_for_status()
+    ids = [m["id"] for m in r.json().get("data", []) if m.get("active", True)]
+    # prefere modelos grandes de texto; ignora voz, visão e moderação
+    ruins = ("whisper", "tts", "guard", "vision", "playai", "orpheus", "prompt")
+    bons = [i for i in ids if not any(x in i.lower() for x in ruins)]
+    preferidos = ("gpt-oss-120b", "llama-3.3-70b", "kimi", "qwen", "llama-4", "gpt-oss")
+    return sorted(bons, key=lambda i: next((n for n, p in enumerate(preferidos) if p in i), 99))
+
+
+def _pedir_ao_groq(prompt: str) -> dict:
+    """Groq: plano gratuito em https://console.groq.com/keys (chave começa com gsk_)."""
+    candidatos = [config.GROQ_MODELO] if config.GROQ_MODELO else []
+    lista_carregada = False
+    esperas = 0
+    while True:
+        if not candidatos:
+            if lista_carregada:
+                raise RuntimeError("Nenhum modelo do Groq aceitou o pedido.")
+            candidatos, lista_carregada = _modelos_groq()[:5], True
+        modelo = candidatos[0]
+        r = requests.post(
+            f"{GROQ_URL}/chat/completions",
+            headers={"Authorization": f"Bearer {config.GROQ_API_KEY}"},
+            json={
+                "model": modelo,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 1.0,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=120,
+        )
+        if r.status_code == 429 and esperas < 4:  # limite do plano grátis
+            esperas += 1
+            time.sleep(20)
+            continue
+        if r.status_code in (400, 404) and "model" in r.text.lower():
+            # modelo aposentado ou sem suporte a JSON: tenta o próximo
+            print(f"   modelo {modelo} indisponível, tentando outro...")
+            candidatos = candidatos[1:]
+            continue
+        if r.status_code in (401, 403):
+            raise RuntimeError("Groq recusou a chave. Confira o segredo GROQ_API_KEY (começa com 'gsk_').")
+        r.raise_for_status()
+        print(f"   (roteiro escrito pelo modelo {modelo} no Groq)")
+        return json.loads(r.json()["choices"][0]["message"]["content"])
+
+
 def gerar(tema: str | None, usados: list[str]) -> dict:
     """Retorna dict com assunto, titulo, roteiro, descricao, hashtags e cenas."""
-    if not config.GEMINI_API_KEY:
-        print("⚠️  Sem GEMINI_API_KEY: usando roteiro de exemplo.")
+    if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
+        print("⚠️  Sem GROQ_API_KEY nem GEMINI_API_KEY: usando roteiro de exemplo.")
         return dict(EXEMPLO)
 
     segundos = config.DURACAO_ALVO_SEGUNDOS
@@ -99,7 +151,7 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
         segundos=segundos,
         palavras=int(segundos * 2.6),
     )
-    dados = _pedir_ao_gemini(prompt)
+    dados = _pedir_ao_groq(prompt) if config.GROQ_API_KEY else _pedir_ao_gemini(prompt)
 
     faltando = {"titulo", "roteiro", "cenas"} - dados.keys()
     if faltando:

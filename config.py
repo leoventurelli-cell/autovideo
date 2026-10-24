@@ -37,7 +37,10 @@ IDIOMA = "português do Brasil"
 DURACAO_ALVO_SEGUNDOS = int(_env("DURACAO_ALVO", "45"))  # Shorts/TikTok: 30 a 60s
 
 # ───────────────────────── IA DO ROTEIRO ─────────────────────────
-# Gemini tem plano gratuito: https://aistudio.google.com/apikey
+# Groq (grátis): https://console.groq.com/keys — se houver chave, ele é usado.
+GROQ_API_KEY = _env("GROQ_API_KEY", "")
+GROQ_MODELO = _env("GROQ_MODELO", "openai/gpt-oss-120b")  # se sair do ar, escolhe outro sozinho
+# Gemini (alternativa grátis): https://aistudio.google.com/apikey
 GEMINI_API_KEY = _env("GEMINI_API_KEY", "")
 GEMINI_MODELO = _env("GEMINI_MODELO", "gemini-2.5-flash")
 
