@@ -34,7 +34,7 @@ def _env(nome: str, padrao: str = "") -> str:
 # "histórias de terror curtas", "fatos sobre animais", "dicas de dinheiro"
 NICHO = _env("NICHO", "curiosidades incríveis e pouco conhecidas sobre o mundo")
 IDIOMA = "português do Brasil"
-DURACAO_ALVO_SEGUNDOS = int(_env("DURACAO_ALVO", "45"))  # Shorts/TikTok: 30 a 60s
+DURACAO_ALVO_SEGUNDOS = int(_env("DURACAO_ALVO", "75"))  # TikTok paga só vídeos com mais de 1 minuto
 
 # ───────────────────────── IA DO ROTEIRO ─────────────────────────
 # Groq (grátis): https://console.groq.com/keys — se houver chave, ele é usado.

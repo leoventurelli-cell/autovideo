@@ -22,6 +22,7 @@ Regras do roteiro:
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
 - Termine com uma frase curta que convide a seguir o canal ou comentar.
 - Não escreva indicações de cena, só o texto que será narrado.
+- O roteiro PRECISA ter pelo menos {palavras} palavras: desenvolva com 3 a 5 fatos, exemplos e detalhes curiosos.
 
 Responda SOMENTE com um JSON neste formato:
 {{
@@ -30,7 +31,7 @@ Responda SOMENTE com um JSON neste formato:
   "roteiro": "texto completo da narração",
   "descricao": "descrição de 2 ou 3 frases para o post",
   "hashtags": ["#exemplo", "#outra", "#shorts"],
-  "cenas": ["5 a 7 termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração, ex: 'deep ocean', 'ancient pyramid'"]
+  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração, ex: 'deep ocean', 'ancient pyramid'"]
 }}"""
 
 EXEMPLO = {
@@ -150,8 +151,18 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
         idioma=config.IDIOMA,
         segundos=segundos,
         palavras=int(segundos * 2.6),
+        cenas=max(6, round(segundos / 7)),
     )
-    dados = _pedir_ao_groq(prompt) if config.GROQ_API_KEY else _pedir_ao_gemini(prompt)
+    pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
+    minimo = int(segundos * 2.6 * 0.85)
+    dados = pedir(prompt)
+    for _ in range(2):  # a IA às vezes escreve curto demais: pede para expandir
+        qtd = len(str(dados.get("roteiro", "")).split())
+        if qtd >= minimo:
+            break
+        print(f"   roteiro com {qtd} palavras (mínimo {minimo}), pedindo versão maior...")
+        dados = pedir(prompt + f"\n\nATENÇÃO: sua versão anterior tinha só {qtd} palavras. "
+                               f"Escreva de novo com NO MÍNIMO {int(segundos * 2.6)} palavras.")
 
     faltando = {"titulo", "roteiro", "cenas"} - dados.keys()
     if faltando:

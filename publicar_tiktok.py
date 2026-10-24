@@ -105,7 +105,7 @@ def publicar(arquivo, roteiro: dict) -> str:
             "unaudited_client_can_only_post_to_private_accounts", "scope_not_authorized", "access_token_invalid_scope",
         ):
             raise
-        print(f"   ℹ️  Post direto ainda não liberado ({e.codigo}). Enviando para a caixa de entrada do app.")
+        print(f"::warning title=TikTok::Post direto ainda não liberado ({e.codigo}). Enviando para a caixa de entrada do app.")
         direto = False
         dados, tamanho, pedaco, qtd, privacidade = _iniciar(cab, arquivo, roteiro, False)
 
@@ -130,15 +130,23 @@ def publicar(arquivo, roteiro: dict) -> str:
                 raise RuntimeError(f"Upload no TikTok falhou: {r.status_code} {r.text[:300]}")
             print(f"   TikTok: pedaço {i + 1}/{qtd} enviado")
 
-    for _ in range(30):  # acompanha o processamento
+    estado, st = None, {}
+    for _ in range(36):  # acompanha o processamento (até 6 minutos)
         time.sleep(10)
         st = _checar(requests.post(f"{API}/post/publish/status/fetch/", headers=cab,
                                    json={"publish_id": publish_id}, timeout=30))
         estado = st.get("status")
+        print(f"   TikTok: status {estado}")
         if estado in ("PUBLISH_COMPLETE", "SEND_TO_USER_INBOX"):
             break
         if estado == "FAILED":
-            raise RuntimeError(f"TikTok recusou o vídeo: {st.get('fail_reason')}")
+            motivo = st.get("fail_reason")
+            print(f"::error title=TikTok recusou o vídeo::{motivo} (publish_id {publish_id})")
+            raise RuntimeError(f"TikTok recusou o vídeo: {motivo}")
+    else:
+        print(f"::error title=TikTok não confirmou::último status: {estado} (publish_id {publish_id}) {st}")
+        raise RuntimeError(f"TikTok não confirmou o recebimento (último status: {estado})")
+    print(f"::notice title=TikTok::{estado} (publish_id {publish_id})")
 
     if direto:
         visibilidade = "público" if privacidade == "PUBLIC_TO_EVERYONE" else f"visibilidade {privacidade}"

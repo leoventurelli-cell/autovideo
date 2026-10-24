@@ -44,6 +44,9 @@
   .tag.ok{border-color:var(--verde);color:var(--verde)}
   .tag.erro{border-color:var(--vermelho);color:var(--vermelho)}
   .botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+  .botoes .largo{grid-column:1/-1}
+  .passos{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px 16px;color:var(--fraco);font-size:13px;line-height:1.7;margin-bottom:14px}
+  .passos b{color:var(--texto)}
   .vazio{color:var(--fraco);text-align:center;padding:40px;border:1px dashed var(--borda);border-radius:16px}
   .links{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;font-size:13px}
   .links a{color:var(--fraco)}
@@ -88,6 +91,7 @@
   </div>
 
   <h2>Vídeos <span class="pill" id="total">0</span></h2>
+  <div class="passos"><b>Postar pelo computador:</b> 1) clique em <b>⬇ Baixar</b> · 2) clique em <b>Postar no TikTok</b> (a legenda já é copiada) · 3) no TikTok Studio, arraste o vídeo e cole a legenda com <b>Ctrl+V</b> → <b>Publicar</b>.</div>
   <div id="lista" class="grade"><div class="vazio">Carregando…</div></div>
 
   <div class="links">
@@ -174,6 +178,7 @@
           <div class="botoes">
             ${v.mp4 ? `<a class="btn amarelo" href="${esc(v.mp4)}" download>⬇ Baixar</a>` : '<span></span>'}
             <button class="btn" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">📋 Legenda</button>
+            ${v.mp4 ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">Postar no TikTok ↗</a>` : ''}
           </div>
         </div>
       </article>`).join('');
