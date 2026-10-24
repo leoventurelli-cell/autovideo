@@ -9,7 +9,7 @@ from googleapiclient.http import MediaFileUpload
 import config
 import youtube_token
 
-ESCOPOS = ["https://www.googleapis.com/auth/youtube.upload"]
+ESCOPOS = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly"]
 
 
 def _credenciais() -> Credentials:

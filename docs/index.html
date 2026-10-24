@@ -249,9 +249,9 @@
       client_id: cfg.youtube_client_id,
       redirect_uri: site,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/youtube.upload',
+      scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
       access_type: 'offline',
-      prompt: 'consent',
+      prompt: 'select_account consent',
       include_granted_scopes: 'true',
       state: 'yt-' + Math.random().toString(36).slice(2),
     });
