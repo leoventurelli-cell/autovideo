@@ -65,13 +65,18 @@ def _pedir_ao_gemini(prompt: str) -> dict:
     for tentativa in range(4):
         r = requests.post(
             url,
-            params={"key": config.GEMINI_API_KEY},
+            headers={"x-goog-api-key": config.GEMINI_API_KEY},  # no cabeçalho: nunca aparece em logs
             json=corpo,
             timeout=90,
         )
         if r.status_code in (429, 500, 503):  # limite do plano grátis / instabilidade
             time.sleep(15 * (tentativa + 1))
             continue
+        if r.status_code in (400, 401, 403):
+            raise RuntimeError(
+                f"Gemini recusou a chave ({r.status_code}). Confira o segredo GEMINI_API_KEY: "
+                f"ele deve começar com 'AIza'. Detalhe: {r.text[:300]}"
+            )
         r.raise_for_status()
         texto = r.json()["candidates"][0]["content"]["parts"][0]["text"]
         texto = re.sub(r"^```(?:json)?|```$", "", texto.strip()).strip()
