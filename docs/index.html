@@ -80,6 +80,21 @@
   .links a{color:var(--fraco)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--verde);color:#111;font-weight:600;padding:10px 18px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.on{opacity:1}
+  .progresso{display:none;background:var(--card);border:1px solid var(--amarelo);border-radius:18px;padding:18px;margin-bottom:16px}
+  .progresso.on{display:block}
+  .progresso .linha{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+  .progresso b{font-size:16px}
+  .progresso .pct{font-weight:800;font-size:22px;color:var(--amarelo)}
+  .barra{height:16px;border-radius:999px;background:var(--bg);border:1px solid var(--borda);overflow:hidden}
+  .barra>div{height:100%;width:0;background:linear-gradient(90deg,#ffe500,#ff2d6f);border-radius:999px;transition:width .8s ease}
+  .progresso.ok{border-color:var(--verde)} .progresso.ok .barra>div{background:var(--verde)} .progresso.ok .pct{color:var(--verde)}
+  .progresso.erro{border-color:var(--vermelho)} .progresso.erro .barra>div{background:var(--vermelho)} .progresso.erro .pct{color:var(--vermelho)}
+  .progresso .etapa{color:var(--fraco);font-size:13px;margin-top:10px;line-height:1.5}
+  .chave{background:var(--card);border:1px dashed var(--borda);border-radius:16px;padding:14px 16px;margin-top:12px;font-size:13px;color:var(--fraco);line-height:1.7}
+  .chave b{color:var(--texto)}
+  .chave ol{margin:6px 0 8px 18px}
+  .chave .lin{display:flex;gap:8px;flex-wrap:wrap}
+  .chave input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--borda);color:var(--texto);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px}
   @media(max-width:640px){.acoes,.redes{grid-template-columns:1fr}}
 </style>
 </head>
@@ -109,7 +124,24 @@
       <button class="btn amarelo" type="submit">Criar vídeo</button>
     </form>
     <div id="sugestoes" class="chips"></div>
-    <p class="dica" id="dica-pedido" style="display:none">Abriu a página do pedido no GitHub: só clique em <b>Create</b> (ou <b>Submit new issue</b>). O vídeo aparece aqui em alguns minutos.</p>
+    <p class="dica" id="dica-pedido" style="display:none">Abriu a página do pedido no GitHub: só clique em <b>Create</b>. Depois volte aqui: a barra abaixo mostra o andamento.</p>
+    <div class="chave" id="chave-box" style="display:none">
+      ⚡ <b>Criar sem sair do site</b> (configuração única, 1 minuto):
+      <ol>
+        <li>Clique em <a class="btn" id="chave-link" target="_blank" style="padding:6px 10px;font-size:13px">Gerar chave no GitHub ↗</a></li>
+        <li>Em <b>Repository access</b> escolha <b>Only select repositories</b> → <b>autovideo</b>. Desça e clique em <b>Generate token</b>.</li>
+        <li>Copie a chave (começa com <b>github_pat_</b>), cole aqui e clique em <b>Salvar</b>:</li>
+      </ol>
+      <div class="lin"><input id="chave-input" type="password" placeholder="github_pat_..." autocomplete="off"><button class="btn amarelo" type="button" onclick="salvarChave()">Salvar</button></div>
+      <div style="margin-top:6px">A chave fica guardada <b>só neste navegador</b> e só vale para o repositório autovideo.</div>
+    </div>
+    <div class="dica" id="chave-ok" style="display:none">⚡ Criação direta ativada neste navegador. <a href="#" onclick="esquecerChave();return false">desativar</a></div>
+  </section>
+
+  <section class="progresso" id="progresso">
+    <div class="linha"><b id="prog-titulo">Criando vídeo…</b><span class="pct" id="prog-pct">0%</span></div>
+    <div class="barra"><div id="prog-barra"></div></div>
+    <div class="etapa" id="prog-etapa">Começando…</div>
   </section>
 
   <div class="acoes">
@@ -202,12 +234,17 @@
   function enviarVideo(i, redes){
     const v = window._videos[i];
     const nomes = {youtube: 'YouTube', ambos: 'YouTube e TikTok'};
+    if (chave()) {
+      disparar('enviar.yml', {id: idDe(v), redes}, `Enviando para ${nomes[redes]}: ${v.titulo}`, 'enviar');
+      return;
+    }
     const url = `${base}/issues/new?` + new URLSearchParams({
       title: `[enviar:${redes}] ${idDe(v)}`,
       body: `Enviar "${v.titulo}" para ${nomes[redes]}. É só clicar em Create.`,
     });
     window.open(url, '_blank');
     toast('Clique em Create na página que abriu');
+    acompanhar({wf: 'enviar.yml', t0: Date.now(), rotulo: `Enviando para ${nomes[redes]}: ${v.titulo}`, tipo: 'enviar'});
   }
   function trocarAba(b, qual){
     const c = b.closest('.colar');
@@ -268,12 +305,163 @@
     const tema = $('tema').value.trim();
     if (!tema) return;
     const formato = $('formato').value;
+    pedirAviso();
+    const rotulo = `Criando vídeo ${formato} sobre: ${tema}`;
+    if (chave()) {
+      disparar('diario.yml', {formato, tema, publicar: 'true'}, rotulo, formato);
+      return;
+    }
     const url = `${base}/issues/new?` + new URLSearchParams({
       title: `[${formato}] ${tema}`,
       body: 'Pedido de vídeo feito pelo painel AutoVídeo. É só clicar em Create para começar.',
     });
     window.open(url, '_blank');
     $('dica-pedido').style.display = 'block';
+    acompanhar({wf: 'diario.yml', t0: Date.now(), rotulo, tipo: formato});
+  }
+
+  // ───────── chave do GitHub (opcional): cria/envia sem sair do site ─────────
+  const API = `https://api.github.com/repos/${usuario}/${repo}`;
+  function chave(){ try { return localStorage.getItem('av_chave') || ''; } catch { return ''; } }
+  function mostrarChave(){
+    $('chave-box').style.display = chave() ? 'none' : 'block';
+    $('chave-ok').style.display = chave() ? 'block' : 'none';
+  }
+  $('chave-link').href = 'https://github.com/settings/personal-access-tokens/new?' + new URLSearchParams({
+    name: 'AutoVideo painel', description: 'Criar e enviar videos pelo painel AutoVideo',
+    target_name: usuario, expires_in: '366', actions: 'write', issues: 'write',
+  });
+  async function salvarChave(){
+    const k = $('chave-input').value.trim();
+    if (!k) return;
+    const r = await fetch(`${API}/actions/workflows`, {headers: {Authorization: `Bearer ${k}`}}).catch(() => null);
+    if (!r || !r.ok) { alert('Essa chave não funcionou. Confira se escolheu o repositório autovideo e a permissão Actions: Read and write.'); return; }
+    try { localStorage.setItem('av_chave', k); } catch { alert('O navegador bloqueou salvar a chave.'); return; }
+    $('chave-input').value = '';
+    mostrarChave();
+    toast('Pronto! Agora é só clicar em Criar vídeo');
+  }
+  function esquecerChave(){ try { localStorage.removeItem('av_chave'); } catch {} mostrarChave(); }
+  mostrarChave();
+
+  function cab(){ const k = chave(); return k ? {Authorization: `Bearer ${k}`, Accept: 'application/vnd.github+json'} : {Accept: 'application/vnd.github+json'}; }
+  async function disparar(wf, inputs, rotulo, tipo){
+    const t0 = Date.now();
+    mostrarProgresso(rotulo, 1, 'Enviando o pedido…');
+    const r = await fetch(`${API}/actions/workflows/${wf}/dispatches`, {
+      method: 'POST', headers: {...cab(), 'Content-Type': 'application/json'},
+      body: JSON.stringify({ref: 'main', inputs}),
+    }).catch(() => null);
+    if (!r || r.status !== 204) {
+      terminar(false, 'Não consegui iniciar. A chave pode ter vencido: clique em "desativar" e gere outra.');
+      return;
+    }
+    acompanhar({wf, t0, rotulo, tipo});
+  }
+
+  // ───────── barra de progresso (termômetro) ─────────
+  let timer = null;
+  const ETAPAS = {
+    'Set up job': ['Ligando o servidor', 3], 'Run actions/checkout@v4': ['Ligando o servidor', 5],
+    'Run actions/setup-python@v5': ['Preparando as ferramentas', 8], 'Instalar FFmpeg': ['Instalando o editor de vídeo', 12],
+    'Instalar dependências': ['Instalando o editor de vídeo', 16],
+    'Gerar e publicar': ['🧠 IA escrevendo o roteiro, 🎙️ narrando e 🎬 montando o vídeo', 85],
+    'Enviar': ['📤 Enviando para as redes', 90],
+    'Publicar o MP4 para download (link direto no painel)': ['Guardando o vídeo para download', 90],
+    'Novas sugestões de tema para o painel': ['Criando novas sugestões de tema', 94],
+    'Salvar histórico e painel': ['Atualizando o painel', 97], 'Atualizar painel': ['Atualizando o painel', 97],
+  };
+  function mostrarProgresso(titulo, pct, etapa, estado){
+    const p = $('progresso');
+    p.className = 'progresso on' + (estado ? ' ' + estado : '');
+    $('prog-titulo').textContent = titulo;
+    $('prog-pct').textContent = Math.round(pct) + '%';
+    $('prog-barra').style.width = Math.max(2, pct) + '%';
+    $('prog-etapa').innerHTML = etapa;
+  }
+  function salvarAcomp(a){ try { a ? localStorage.setItem('av_acomp', JSON.stringify(a)) : localStorage.removeItem('av_acomp'); } catch {} }
+  function acompanhar(a){
+    salvarAcomp(a);
+    clearTimeout(timer);
+    $('progresso').scrollIntoView({behavior: 'smooth', block: 'center'});
+    passo(a);
+  }
+  async function passo(a){
+    const intervalo = chave() ? 6000 : 15000;
+    const seg = (Date.now() - a.t0) / 1000;
+    try {
+      if (!a.run) {
+        mostrarProgresso(a.rotulo, Math.min(3, 1 + seg / 20), chave() ? 'Esperando o servidor começar…' : 'Esperando você clicar em <b>Create</b> no GitHub… (depois disso a barra anda sozinha)');
+        const j = await (await fetch(`${API}/actions/workflows/${a.wf}/runs?per_page=5&event=workflow_dispatch`, {headers: cab(), cache: 'no-store'})).json();
+        const run = (j.workflow_runs || []).find(r => new Date(r.created_at).getTime() >= a.t0 - 15000);
+        if (run) { a.run = run.id; a.url = run.html_url; salvarAcomp(a); }
+        if (!run && seg > 900) { terminar(false, 'O pedido não começou. Tente de novo.'); return; }
+      }
+      if (a.run) {
+        const j = await (await fetch(`${API}/actions/runs/${a.run}/jobs`, {headers: cab(), cache: 'no-store'})).json();
+        const job = (j.jobs || [])[0];
+        if (job) {
+          if (job.status === 'completed') {
+            if (job.conclusion === 'success') { await esperarSite(a); return; }
+            terminar(false, `Deu erro. <a href="${a.url}" target="_blank">Ver o que aconteceu ↗</a>`);
+            return;
+          }
+          const atual = (job.steps || []).find(s => s.status === 'in_progress');
+          const feitos = (job.steps || []).filter(s => s.status === 'completed').map(s => ETAPAS[s.name]?.[1] || 0);
+          let pct = Math.max(3, ...feitos);
+          let texto = 'Trabalhando…';
+          if (atual) {
+            const [nome, fim] = ETAPAS[atual.name] || [atual.name, pct + 2];
+            texto = nome;
+            if (fim - pct > 20) {  // etapa longa: anda pelo tempo esperado
+              const esperado = a.tipo === 'longo' ? 900 : a.tipo === 'enviar' ? 120 : 200;
+              const dt = (Date.now() - new Date(atual.started_at).getTime()) / 1000;
+              pct = pct + (fim - pct) * Math.min(0.97, dt / esperado);
+              const falta = Math.max(1, Math.round((esperado - dt) / 60));
+              texto += dt < esperado ? ` · faltam ~${falta} min` : ' · quase lá…';
+            }
+          }
+          mostrarProgresso(a.rotulo, pct, texto + ` · <a href="${a.url}" target="_blank">detalhes ↗</a>`);
+        }
+      }
+    } catch (e) {
+      mostrarProgresso(a.rotulo, 3, 'Sem conexão com o GitHub, tentando de novo…');
+    }
+    timer = setTimeout(() => passo(a), intervalo);
+  }
+  async function esperarSite(a){
+    // o vídeo já foi feito; espera o site publicar a lista nova (≈1 min)
+    for (let i = 0; i < 24; i++) {
+      mostrarProgresso(a.rotulo, 98, 'Pronto! Colocando no site…');
+      const lista = await fetch('videos.json?' + Date.now(), {cache: 'no-store'}).then(r => r.json()).catch(() => []);
+      const mudou = JSON.stringify(lista).length !== (window._tamanhoLista || 0);
+      if (mudou && lista.some(v => (v.execucao || '').endsWith('/' + a.run) || new Date(v.data).getTime() >= a.t0 - 60000)) break;
+      if (a.tipo === 'enviar' && mudou) break;
+      await new Promise(r => setTimeout(r, 5000));
+    }
+    await carregar();
+    terminar(true, a.tipo === 'enviar' ? 'Enviado! O link aparece no vídeo aqui embaixo.' : 'Vídeo pronto! Ele é o primeiro da lista aqui embaixo.');
+  }
+  function terminar(ok, msg){
+    clearTimeout(timer);
+    salvarAcomp(null);
+    mostrarProgresso(ok ? '✅ Pronto!' : '⚠️ Não deu certo', 100, msg, ok ? 'ok' : 'erro');
+    avisar(ok ? '✅ Vídeo pronto!' : '⚠️ AutoVídeo: deu erro', msg.replace(/<[^>]+>/g, ''));
+    if (ok) setTimeout(() => $('lista').scrollIntoView({behavior: 'smooth'}), 1500);
+  }
+
+  // ───────── aviso (notificação + som + título da aba) ─────────
+  function pedirAviso(){ try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} }
+  function avisar(titulo, corpo){
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(titulo, {body: corpo, icon: 'icone.png'}); } catch {}
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [523, 659, 784].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.18); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.3);
+        o.start(ctx.currentTime + i * 0.18); o.stop(ctx.currentTime + i * 0.18 + 0.32); });
+    } catch {}
+    const antes = document.title; let n = 0;
+    const pisca = setInterval(() => { document.title = n++ % 2 ? antes : titulo; if (n > 20 || document.hasFocus()) { clearInterval(pisca); document.title = antes; } }, 1000);
   }
 
   fetch('sugestoes.json?' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null).then(s => {
@@ -293,11 +481,13 @@
     return `<span class="tag ${caixa ? '' : 'ok'}" title="${esc(valor)}">${nome}: ${caixa ? 'na caixa de entrada' : 'publicado'}</span>`;
   }
 
+  async function carregar(){
   const sem_cache = '?' + Date.now();
-  Promise.all([
-    fetch('config.json' + sem_cache).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-    fetch('videos.json' + sem_cache).then(r => r.ok ? r.json() : []).catch(() => []),
+  return Promise.all([
+    fetch('config.json' + sem_cache, {cache: 'no-store'}).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+    fetch('videos.json' + sem_cache, {cache: 'no-store'}).then(r => r.ok ? r.json() : []).catch(() => []),
   ]).then(([c, videos]) => {
+    window._tamanhoLista = JSON.stringify(videos || []).length;
     cfg = c || {};
     if (cfg.tiktok_conectado) { $('tt-status').textContent = 'conectado'; $('tt-status').classList.add('ok'); $('tt-conectar').textContent = 'Reconectar TikTok'; }
     if (cfg.youtube_conectado) { $('yt-status').textContent = 'conectado' + (cfg.youtube_canal ? ': ' + cfg.youtube_canal : ''); $('yt-status').classList.add('ok'); $('yt-conectar').textContent = 'Reconectar YouTube'; }
@@ -324,6 +514,21 @@
           </div>
         </div>
       </article>`).join('');
+  });
+  }
+  carregar().then(() => {  // continua acompanhando se a página foi recarregada no meio
+    let a = null; try { a = JSON.parse(localStorage.getItem('av_acomp') || 'null'); } catch {}
+    if (a && Date.now() - a.t0 < 3 * 3600 * 1000) { acompanhar(a); return; }
+    // nada salvo: se já tem vídeo sendo feito (ex.: horário automático), mostra a barra também
+    for (const wf of ['diario.yml', 'enviar.yml']) {
+      fetch(`${API}/actions/workflows/${wf}/runs?per_page=1&status=in_progress`, {headers: cab(), cache: 'no-store'})
+        .then(r => r.json()).then(j => {
+          const run = (j.workflow_runs || [])[0];
+          if (!run || localStorage.getItem('av_acomp')) return;
+          acompanhar({wf, t0: new Date(run.created_at).getTime(), run: run.id, url: run.html_url,
+                      rotulo: wf === 'diario.yml' ? 'Criando vídeo…' : 'Enviando vídeo…', tipo: wf === 'diario.yml' ? 'curto' : 'enviar'});
+        }).catch(() => {});
+    }
   });
 </script>
 </body>
