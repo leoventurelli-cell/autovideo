@@ -1,5 +1,6 @@
 {
  "tiktok_client_key": "sbawzzqcahavlgngby",
  "tiktok_conectado": true,
- "youtube_conectado": false
+ "youtube_conectado": false,
+ "youtube_client_id": "1013115628081-ut05e81asntq83det5fufittgv7j303h.apps.googleusercontent.com"
 }
