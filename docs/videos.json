@@ -1,8 +1,16 @@
 [
  {
-  "data": "2026-10-24T16:11:53+00:00",
+  "data": "2026-10-24T13:11:53-03:00",
   "titulo": "Por que o céu de Marte é vermelho de dia e azul ao pôr do sol?",
   "assunto": "Por que o céu de Marte muda de cor",
-  "download": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40110316495"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40110316495"
+ },
+ {
+  "data": "2026-10-24T13:27:51-03:00",
+  "titulo": "Tardígrado sobrevive ao vácuo do espaço – o urso d’água imortal",
+  "assunto": "tardígrado sobrevive ao vácuo do espaço",
+  "legenda": "Tardígrado sobrevive ao vácuo do espaço – o urso d’água imortal\n\nDescubra como o tardígrado, o urso d’água, sobreviveu ao vácuo do espaço e retornou vivo. Um exemplo impressionante de resistência extrema.\n\n#tardigrade #space #curiosidades",
+  "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261024-1631-3/tardigrado-sobrevive-ao-vacuo-do-espaco.mp4",
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40111787756"
  }
 ]
