@@ -256,10 +256,13 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         audio_filtro = (
             f"[1:a]apad=pad_dur={CAUDA}[voz];"
             f"[2:a]volume={config.VOLUME_MUSICA},afade=t=out:st={total - 1.5:.2f}:d=1.5[mus];"
-            "[voz][mus]amix=inputs=2:duration=first:normalize=0[a]"
+            "[voz][mus]amix=inputs=2:duration=first:normalize=0[a0]"
         )
     else:
-        audio_filtro = f"[1:a]apad=pad_dur={CAUDA}[a]"
+        audio_filtro = f"[1:a]apad=pad_dur={CAUDA}[a0]"
+    # volume no padrão das redes (-14 LUFS) e em estéreo 48 kHz: áudio mono e baixo
+    # às vezes sai mudo/fraco no TikTok
+    audio_filtro += ";[a0]loudnorm=I=-14:TP=-1.5:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo[a]"
 
     legendas_esc = str(legendas).replace("\\", "/").replace(":", "\\:")
     fontes_esc = str(config.PASTA_FONTES).replace("\\", "/").replace(":", "\\:")
@@ -271,7 +274,7 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         "-t", f"{total:.3f}",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "21" if formato == "longo" else "20",
         "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
+        "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
         "-movflags", "+faststart",
         final,
     )
@@ -385,7 +388,7 @@ def criar_chamada(video_longo: Path, titulo: str, destino: Path, segundos: float
         f"[base][1:v]overlay=0:0,fade=t=out:st={fade:.2f}:d=1.2,format=yuv420p[v];"
         f"[0:a]afade=t=out:st={fade:.2f}:d=1.2[aud]",
         "-map", "[v]", "-map", "[aud]", "-r", str(FPS),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "160k",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
         "-movflags", "+faststart", destino,
     )
     camada.unlink(missing_ok=True)
