@@ -1,0 +1,7 @@
+.env
+client_secret*.json
+.tiktok_refresh_token
+saida/*
+!saida/.gitkeep
+__pycache__/
+*.pyc

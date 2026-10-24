@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoVídeo · Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0d0f14;--card:#161a22;--borda:#252b37;--texto:#e9edf5;--fraco:#8b94a7;--amarelo:#ffe500;--verde:#2bd576;--vermelho:#ff5d5d}
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--texto);font-family:Poppins,system-ui,sans-serif;padding:32px 16px 64px}
+  main{max-width:860px;margin:0 auto}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+  .logo{width:48px;height:48px;border-radius:14px;background:var(--amarelo);color:#111;display:grid;place-items:center;font-weight:800;font-size:22px}
+  h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  header p{color:var(--fraco);font-size:14px}
+  .acoes{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:24px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:16px;font-weight:600;text-decoration:none;font-size:16px;border:1px solid var(--borda);color:var(--texto);background:var(--card);transition:transform .15s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn.principal{background:var(--amarelo);color:#111;border:none;font-size:18px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+  .stat{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:16px}
+  .stat b{display:block;font-size:26px}
+  .stat span{color:var(--fraco);font-size:13px}
+  h2{font-size:18px;margin:8px 0 12px}
+  .video{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:16px;margin-bottom:10px}
+  .video h3{font-size:16px;font-weight:600;margin-bottom:4px}
+  .video .data{color:var(--fraco);font-size:13px;margin-bottom:10px}
+  .tags{display:flex;flex-wrap:wrap;gap:8px}
+  .tag{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--borda);color:var(--texto);text-decoration:none}
+  .tag.ok{border-color:var(--verde);color:var(--verde)}
+  .tag.erro{border-color:var(--vermelho);color:var(--vermelho)}
+  .vazio{color:var(--fraco);text-align:center;padding:40px;border:1px dashed var(--borda);border-radius:16px}
+  .links{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;font-size:13px}
+  .links a{color:var(--fraco)}
+  #tiktok{display:none;background:#1c2a1f;border:1px solid var(--verde);border-radius:16px;padding:20px;margin-bottom:24px}
+  #tiktok code{display:block;word-break:break-all;background:#0d0f14;padding:12px;border-radius:10px;margin:12px 0;font-size:12px}
+  #tiktok button{background:var(--verde);border:none;color:#111;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:inherit}
+  @media(max-width:600px){.acoes{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo">▶</div>
+    <div><h1>AutoVídeo</h1><p>Vídeos curtos feitos por IA, publicados no YouTube e TikTok</p></div>
+  </header>
+
+  <section id="tiktok">
+    <h2>✅ TikTok autorizado</h2>
+    <p>Copie o endereço abaixo e cole no script <b>autorizar_tiktok.py</b> (ou mande pro Claude).</p>
+    <code id="tiktok-url"></code>
+    <button onclick="copiar()">Copiar endereço</button>
+  </section>
+
+  <div class="acoes">
+    <a class="btn principal" id="gerar" target="_blank">🎬 Gerar vídeo agora</a>
+    <a class="btn" id="execucoes" target="_blank">📋 Ver execuções</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="total">0</b><span>vídeos feitos</span></div>
+    <div class="stat"><b id="ultimo">—</b><span>último vídeo</span></div>
+    <div class="stat"><b>11h47</b><span>vídeo automático diário</span></div>
+  </div>
+
+  <h2>Vídeos</h2>
+  <div id="lista"><div class="vazio">Carregando…</div></div>
+
+  <div class="links">
+    <a id="chaves" target="_blank">🔑 Chaves (Secrets)</a>
+    <a id="temas" target="_blank">📝 Fila de temas</a>
+    <a href="termos.html">Termos de uso</a>
+    <a href="privacidade.html">Política de privacidade</a>
+  </div>
+</main>
+<script>
+  // descobre usuário/repositório pelo endereço do GitHub Pages
+  const usuario = location.hostname.split('.')[0];
+  const repo = location.pathname.split('/').filter(Boolean)[0] || 'autovideo';
+  const base = `https://github.com/${usuario}/${repo}`;
+  document.getElementById('gerar').href = `${base}/actions/workflows/diario.yml`;
+  document.getElementById('execucoes').href = `${base}/actions`;
+  document.getElementById('chaves').href = `${base}/settings/secrets/actions`;
+  document.getElementById('temas').href = `${base}/edit/main/temas.txt`;
+
+  // retorno da autorização do TikTok
+  if (new URLSearchParams(location.search).get('code')) {
+    document.getElementById('tiktok').style.display = 'block';
+    document.getElementById('tiktok-url').textContent = location.href;
+  }
+  function copiar(){ navigator.clipboard.writeText(location.href); }
+
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function tag(nome, valor){
+    if (!valor) return '';
+    if (valor === 'ERRO') return `<span class="tag erro">${nome}: erro</span>`;
+    if (valor.startsWith('http')) return `<a class="tag ok" href="${esc(valor)}" target="_blank">${nome} ↗</a>`;
+    return `<span class="tag ok" title="${esc(valor)}">${nome}: enviado</span>`;
+  }
+  fetch('videos.json?' + Date.now()).then(r => r.ok ? r.json() : []).catch(() => []).then(videos => {
+    videos = (videos || []).slice().reverse();
+    document.getElementById('total').textContent = videos.length;
+    if (videos[0]) document.getElementById('ultimo').textContent = new Date(videos[0].data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+    const lista = document.getElementById('lista');
+    if (!videos.length) { lista.innerHTML = '<div class="vazio">Nenhum vídeo ainda. Clique em <b>Gerar vídeo agora</b> e depois em <b>Run workflow</b>.</div>'; return; }
+    lista.innerHTML = videos.map(v => `
+      <div class="video">
+        <h3>${esc(v.titulo)}</h3>
+        <div class="data">${new Date(v.data).toLocaleString('pt-BR')} · ${esc(v.assunto)}</div>
+        <div class="tags">
+          ${tag('YouTube', v.youtube)}${tag('TikTok', v.tiktok)}
+          ${v.download ? `<a class="tag" href="${esc(v.download)}" target="_blank">⬇ Baixar vídeo</a>` : ''}
+        </div>
+      </div>`).join('');
+  });
+</script>
+</body>
+</html>

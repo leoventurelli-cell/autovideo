@@ -1,0 +1,84 @@
+name: Vídeo diário
+
+on:
+  schedule:
+    # Todo dia às 11:47 de Brasília (14:47 UTC). Para 2 vídeos/dia, adicione outra linha.
+    - cron: "47 14 * * *"
+  workflow_dispatch:   # botão "Run workflow" para rodar na hora
+    inputs:
+      tema:
+        description: "Tema específico (opcional)"
+        required: false
+      publicar:
+        description: "Publicar nas redes? (desmarque para só gerar e baixar o vídeo)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar FFmpeg
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          mkdir -p fontes
+          [ -f fontes/Poppins-Bold.ttf ] || curl -sSL -o fontes/Poppins-Bold.ttf \
+            https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Gerar e publicar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          # Configurações sem segredo ficam em Settings → Variables
+          NICHO: ${{ vars.NICHO }}
+          VOZ: ${{ vars.VOZ }}
+          YT_PRIVACIDADE: ${{ vars.YT_PRIVACIDADE }}
+          TIKTOK_MODO: ${{ vars.TIKTOK_MODO }}
+          PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
+          PUBLICAR_TIKTOK: ${{ vars.PUBLICAR_TIKTOK }}
+          TEMA: ${{ github.event.inputs.tema }}
+          SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
+        run: |
+          ARGS=()
+          [ -n "$TEMA" ] && ARGS+=(--tema "$TEMA")
+          [ "$SO_GERAR" = "true" ] && ARGS+=(--sem-publicar)
+          python main.py "${ARGS[@]}"
+
+      - name: Guardar o vídeo (fica 7 dias para download)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_number }}
+          path: |
+            saida/**/*.mp4
+            saida/**/roteiro.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Salvar histórico de assuntos
+        if: always()
+        run: |
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          git add historico.json temas.txt docs/videos.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "histórico: novo vídeo" && git pull --rebase && git push)
