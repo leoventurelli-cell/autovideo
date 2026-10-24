@@ -23,6 +23,17 @@ jobs:
           NUMERO: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: |
+          # [conectar:youtube|tiktok] CÓDIGO  → conclui a conexão com a rede
+          case "$TITULO" in "[conectar:"*)
+            REDE=$(printf '%s' "$TITULO" | sed -E 's/^\[conectar:([a-z]+)\].*/\1/')
+            CODIGO=$(printf '%s' "$TITULO" | sed -E 's/^\[[^]]+\][[:space:]]*//')
+            # tira o código do título (ele só vale junto com o segredo, mas não precisa ficar à mostra)
+            gh issue edit "$NUMERO" -R "$REPO" --title "[conectar:$REDE] código recebido"
+            gh workflow run "conectar_$REDE.yml" -R "$REPO" -f codigo="$CODIGO"
+            gh issue comment "$NUMERO" -R "$REPO" --body "🔗 Conectando o **$REDE**... em 1 minuto o painel mostra \"conectado\"."
+            gh issue close "$NUMERO" -R "$REPO"
+            exit 0 ;;
+          esac
           # [enviar:youtube|tiktok|ambos] ID  → envia um vídeo que já está no painel
           case "$TITULO" in "[enviar:"*)
             REDES=$(printf '%s' "$TITULO" | sed -E 's/^\[enviar:([a-z]+)\].*/\1/')

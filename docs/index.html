@@ -92,12 +92,13 @@
 
   <!-- aparece quando o TikTok devolve o código de autorização -->
   <section class="aviso" id="retorno">
-    <b>✅ <span id="rede-retorno">TikTok</span> autorizado! Falta 1 passo:</b>
+    <b>✅ <span id="rede-retorno">TikTok</span> autorizado! Falta só 1 clique:</b>
     <ol>
-      <li>Clique em <button class="btn" onclick="copiar(codigoTikTok)">📋 Copiar código</button></li>
-      <li>Clique em <a class="btn amarelo" id="concluir" target="_blank">Concluir conexão ↗</a> → <b>Run workflow</b> → cole o código → <b>Run workflow</b></li>
+      <li>Clique em <a class="btn amarelo" id="concluir-facil" target="_blank">✅ Concluir conexão ↗</a></li>
+      <li>Na página do GitHub que abrir, clique em <b>Create</b>. Pronto! Em 1 minuto aparece "conectado" aqui.</li>
     </ol>
-    <p style="color:var(--fraco);font-size:13px;margin-top:8px">O código vale poucos minutos: faça logo em seguida.</p>
+    <p style="color:var(--fraco);font-size:13px;margin-top:8px">O código vale poucos minutos: faça logo em seguida.
+      Jeito manual (se precisar): <a href="#" onclick="copiar(codigoTikTok);return false">copiar código</a> e colar em <a id="concluir" target="_blank">Run workflow</a>.</p>
   </section>
 
   <section class="criar">
@@ -225,6 +226,11 @@
       $('rede-retorno').textContent = 'YouTube';
       $('concluir').href = `${base}/actions/workflows/conectar_youtube.yml`;
     }
+    $('concluir-facil').href = `${base}/issues/new?` + new URLSearchParams({
+      title: `[conectar:${voltouDoYouTube ? 'youtube' : 'tiktok'}] ${codigoTikTok}`,
+      body: 'Concluir a conexão pelo painel AutoVídeo. É só clicar em Create.',
+    });
+    $('retorno').scrollIntoView({block: 'center'});
     history.replaceState(null, '', location.pathname);  // evita reusar um código vencido ao recarregar
   }
   if (params.get('error')) alert('O TikTok não autorizou: ' + (params.get('error_description') || params.get('error')));
