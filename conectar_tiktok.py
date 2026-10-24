@@ -12,9 +12,20 @@ import requests
 import config
 import tiktok_token
 
+def falhar(msg: str):
+    """Mostra o erro em destaque no resumo da execução do GitHub (Annotations)."""
+    print(f"::error title=Conexão com o TikTok::{msg}")
+    raise SystemExit(msg)
+
+
+if not config.TIKTOK_CLIENT_KEY:
+    falhar("Falta o Client key do TikTok (variável TIKTOK_CLIENT_KEY).")
+if not config.TIKTOK_CLIENT_SECRET:
+    falhar("Falta o segredo TIKTOK_CLIENT_SECRET no GitHub.")
+
 colado = (sys.argv[1] if len(sys.argv) > 1 else "").strip()
 if not colado:
-    raise SystemExit("Cole o código (ou o endereço completo) que apareceu no painel depois de autorizar.")
+    falhar("Cole o código (ou o endereço completo) que apareceu no painel depois de autorizar.")
 
 params = urllib.parse.parse_qs(urllib.parse.urlparse(colado).query)
 codigo = params.get("code", [colado])[0]
@@ -31,14 +42,20 @@ r = requests.post(
     },
     timeout=30,
 )
-dados = r.json()
+try:
+    dados = r.json()
+except ValueError:
+    falhar(f"Resposta inesperada do TikTok ({r.status_code}): {r.text[:200]}")
 if "refresh_token" not in dados:
-    erro = dados.get("error_description") or dados.get("error") or dados
-    raise SystemExit(
-        f"O TikTok não aceitou o código: {erro}\n"
-        "O código vale poucos minutos e só pode ser usado uma vez. "
-        "Clique de novo em 'Conectar TikTok' no painel e rode este passo logo em seguida."
-    )
+    erro = dados.get("error", "?")
+    detalhe = dados.get("error_description", "")
+    dica = {
+        "invalid_client": "o Client secret não confere com o Client key. Confira se colou o secret do SANDBOX.",
+        "invalid_grant": "o código venceu ou já foi usado. Clique de novo em 'Conectar TikTok' e conclua em seguida.",
+        "invalid_request": "o endereço de retorno (Redirect URI) não confere com o cadastrado no app.",
+    }.get(erro, "veja o detalhe acima.")
+    falhar(f"TikTok recusou ({erro}): {detalhe} → Provável causa: {dica} "
+           f"[client_key={config.TIKTOK_CLIENT_KEY}, redirect={config.TIKTOK_REDIRECT_URI}]")
 
 tiktok_token.salvar(dados["refresh_token"])
 
