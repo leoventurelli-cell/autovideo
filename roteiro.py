@@ -274,6 +274,7 @@ Responda SOMENTE com um JSON:
   "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
   "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
   "hashtags_youtube": ["3 a 5 hashtags relevantes"],
+  "titulo_short": "título de um Short de 1 minuto que divulga este vídeo (até 55 caracteres, provoca curiosidade, palavra-chave no início)",
   "tags_youtube": ["10 a 15 palavras-chave de busca em português, do específico ao amplo"]
 }}"""
 
@@ -309,5 +310,6 @@ def textos_virais(dados: dict, formato: str = "curto") -> dict:
     dados["hashtags_tiktok"] = lista("hashtags_tiktok", 7) or dados.get("hashtags", [])
     dados["hashtags"] = lista("hashtags_youtube", 5) or dados.get("hashtags", [])
     dados["tags_youtube"] = lista("tags_youtube", 15)
+    dados["titulo_short"] = str(v.get("titulo_short") or dados.get("titulo", "")).strip()[:90]
     print(f"   ✨ título viral: {dados['titulo']}")
     return dados

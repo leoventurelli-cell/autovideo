@@ -318,3 +318,75 @@ def criar_capa(video_mp4: Path, titulo: str, destino: Path) -> Path:
     img.save(destino, "JPEG", quality=90)
     quadro.unlink(missing_ok=True)
     return destino
+
+
+# ───────────────────────── Short de chamada para o vídeo longo ─────────────────────────
+def _quebrar(d, texto, fonte, largura_max):
+    linhas, atual = [], ""
+    for p in texto.split():
+        teste = f"{atual} {p}".strip()
+        if d.textlength(teste, font=fonte) <= largura_max:
+            atual = teste
+        else:
+            if atual:
+                linhas.append(atual)
+            atual = p
+    if atual:
+        linhas.append(atual)
+    return linhas
+
+
+def criar_chamada(video_longo: Path, titulo: str, destino: Path, segundos: float = 58.0,
+                  inicio: float = 0.0) -> Path:
+    """Short vertical (1080x1920) com o começo do vídeo longo + faixas
+    "VÍDEO COMPLETO NO CANAL", para levar o público do Shorts até o vídeo longo."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    total = duracao(video_longo)
+    segundos = max(10.0, min(segundos, total - inicio))
+    fonte_arq = str(config.PASTA_FONTES / "Poppins-Bold.ttf")
+
+    # camada transparente com os textos (desenhada no Pillow, não depende do drawtext do FFmpeg)
+    cam = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    tam = 84
+    while True:
+        f = ImageFont.truetype(fonte_arq, tam)
+        linhas = _quebrar(d, titulo.upper(), f, 980)
+        if len(linhas) <= 4 or tam <= 52:
+            break
+        tam -= 6
+    alt = int(tam * 1.15)
+    y = 610 - alt * len(linhas)  # o vídeo começa em y=656
+    for n, linha in enumerate(linhas):
+        largura = d.textlength(linha, font=f)
+        d.text(((1080 - largura) / 2, y), linha, font=f, fill="#FFE500" if n == 0 else "#FFFFFF",
+               stroke_width=max(4, tam // 12), stroke_fill="#000000")
+        y += alt
+
+    # faixa de baixo
+    d.rounded_rectangle((90, 1360, 990, 1530), radius=36, fill=(255, 0, 0, 235))
+    f2 = ImageFont.truetype(fonte_arq, 54)
+    t2 = "ASSISTA O VÍDEO COMPLETO"
+    for texto, fonte, yy in ((t2, f2, 1378), ("NO CANAL  •  LINK NA DESCRIÇÃO", ImageFont.truetype(fonte_arq, 40), 1458)):
+        largura = d.textlength(texto, font=fonte)
+        d.text(((1080 - largura) / 2, yy), texto, font=fonte, fill="#FFFFFF")
+    camada = destino.with_suffix(".camada.png")
+    cam.save(camada)
+
+    fade = max(0.0, segundos - 1.2)
+    _ffmpeg(
+        "-ss", f"{inicio:.2f}", "-t", f"{segundos:.2f}", "-i", video_longo, "-i", camada,
+        "-filter_complex",
+        "[0:v]split[a][b];"
+        "[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=24:2,eq=brightness=-0.18[fundo];"
+        "[b]scale=1080:-2[frente];"
+        "[fundo][frente]overlay=0:656[base];"
+        f"[base][1:v]overlay=0:0,fade=t=out:st={fade:.2f}:d=1.2,format=yuv420p[v];"
+        f"[0:a]afade=t=out:st={fade:.2f}:d=1.2[aud]",
+        "-map", "[v]", "-map", "[aud]", "-r", str(FPS),
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "160k",
+        "-movflags", "+faststart", destino,
+    )
+    camada.unlink(missing_ok=True)
+    return destino

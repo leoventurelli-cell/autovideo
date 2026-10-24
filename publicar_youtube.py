@@ -52,7 +52,7 @@ def publicar(arquivo, roteiro: dict, formato: str = "curto", capitulos=None, cap
     corpo = {
         "snippet": {
             "title": roteiro["titulo"][:100],
-            "description": descricao(roteiro, formato, capitulos),
+            "description": roteiro.get("descricao_pronta") or descricao(roteiro, formato, capitulos),
             "tags": (roteiro.get("tags_youtube") or [h.lstrip("#") for h in roteiro.get("hashtags", [])])[:15],
             "categoryId": config.YT_CATEGORIA,
             "defaultLanguage": "pt-BR",

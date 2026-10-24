@@ -23,6 +23,15 @@ jobs:
           NUMERO: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: |
+          # [enviar:youtube|tiktok|ambos] ID  → envia um vídeo que já está no painel
+          case "$TITULO" in "[enviar:"*)
+            REDES=$(printf '%s' "$TITULO" | sed -E 's/^\[enviar:([a-z]+)\].*/\1/')
+            ID=$(printf '%s' "$TITULO" | sed -E 's/^\[[^]]+\][[:space:]]*//')
+            gh workflow run enviar.yml -R "$REPO" -f id="$ID" -f redes="$REDES"
+            gh issue comment "$NUMERO" -R "$REPO" --body "📤 Enviando o vídeo **$ID** para: **$REDES**. Em alguns minutos o painel mostra o link."
+            gh issue close "$NUMERO" -R "$REPO"
+            exit 0 ;;
+          esac
           FORMATO=curto
           case "$TITULO" in "[longo]"*) FORMATO=longo ;; esac
           TEMA=$(printf '%s' "$TITULO" | sed -E 's/^\[[a-z]+\][[:space:]]*//')

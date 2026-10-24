@@ -69,6 +69,10 @@
   .abas{display:flex;gap:6px}
   .aba{font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--borda);background:none;color:var(--fraco);cursor:pointer}
   .aba.on{border-color:var(--amarelo);color:var(--amarelo)}
+  .btn.yt{background:#ff0000;color:#fff;border:none}
+  .btn.ambos{background:linear-gradient(90deg,#ff0000,#ff2d6f 55%,#25f4ee);color:#fff;border:none}
+  .fmt.chamada{background:#ff0000;color:#fff}
+  .fmt{white-space:nowrap;display:inline-block}
   .passos{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px 16px;color:var(--fraco);font-size:13px;line-height:1.7;margin-bottom:14px}
   .passos b{color:var(--texto)}
   .vazio{color:var(--fraco);text-align:center;padding:40px;border:1px dashed var(--borda);border-radius:16px}
@@ -128,7 +132,7 @@
   </div>
 
   <h2>Vídeos <span class="pill" id="total">0</span></h2>
-  <div class="passos"><b>Postar pelo computador:</b> 1) clique em <b>⬇ Baixar</b> · 2) clique em <b>Abrir TikTok Studio</b> e arraste o vídeo · 3) em cada caixa (Título, Legenda, Hashtags) clique em <b>Copiar</b> e cole com <b>Ctrl+V</b> → <b>Publicar</b>.</div>
+  <div class="passos"><b>Postar pelo computador:</b> 1) clique em <b>⬇ Baixar</b> · 2) clique em <b>Abrir TikTok Studio</b> e arraste o vídeo · 3) em cada caixa (Título, Legenda, Hashtags) clique em <b>Copiar</b> e cole com <b>Ctrl+V</b> → <b>Publicar</b>. Ou deixe a gente postar: <b>Enviar no YouTube</b> / <b>Enviar em ambos</b> (abre o GitHub: clique em <b>Create</b>).</div>
   <div id="lista" class="grade"><div class="vazio">Carregando…</div></div>
 
   <div class="links">
@@ -188,6 +192,21 @@
       <div class="painel-tt" ${comecaYT ? 'hidden' : ''}>${tiktok}</div>
       <div class="painel-yt" ${comecaYT ? '' : 'hidden'}>${yt}</div>
     </div>`;
+  }
+  function idDe(v){
+    if (v.id) return v.id;
+    const m = (v.mp4 || '').match(/\/download\/([^/]+)\//);
+    return m ? m[1] : '';
+  }
+  function enviarVideo(i, redes){
+    const v = window._videos[i];
+    const nomes = {youtube: 'YouTube', ambos: 'YouTube e TikTok'};
+    const url = `${base}/issues/new?` + new URLSearchParams({
+      title: `[enviar:${redes}] ${idDe(v)}`,
+      body: `Enviar "${v.titulo}" para ${nomes[redes]}. É só clicar em Create.`,
+    });
+    window.open(url, '_blank');
+    toast('Clique em Create na página que abriu');
   }
   function trocarAba(b, qual){
     const c = b.closest('.colar');
@@ -287,14 +306,15 @@
           ? `<video src="${esc(v.mp4)}" controls preload="none" playsinline poster="${esc(v.capa || '')}"></video>`
           : `<div class="sem">Vídeo feito antes do download direto.<br>${v.execucao || v.download ? `<a href="${esc(v.execucao || v.download)}" target="_blank">Baixar pela execução ↗</a>` : ''}</div>`}
         <div class="corpo">
-          <h3>${esc(v.titulo)}<span class="fmt">${v.formato === 'longo' ? 'LONGO 16:9' : 'CURTO 9:16'}</span></h3>
+          <h3>${esc(v.titulo)}<span class="fmt">${v.formato === 'longo' ? 'LONGO 16:9' : 'CURTO 9:16'}</span>${v.chamada_de ? '<span class="fmt chamada">SHORT DO LONGO</span>' : ''}</h3>
           <div class="data">${new Date(v.data).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}${v.segundos ? ' · ' + (v.segundos >= 120 ? Math.round(v.segundos / 60) + ' min' : v.segundos + 's') : ''}</div>
           <div class="tags">${tag('YouTube', v.youtube)}${tag('TikTok', v.tiktok)}</div>
           ${blocoTextos(v, i)}
           <div class="botoes">
             ${v.mp4 ? `<a class="btn amarelo largo" href="${esc(v.mp4)}" download>⬇ Baixar vídeo</a>` : ''}
             ${v.mp4 && v.formato !== 'longo' ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank">Abrir TikTok Studio ↗</a>` : ''}
-            ${v.mp4 ? `<a class="btn largo" href="https://www.youtube.com/upload" target="_blank">Abrir YouTube Studio ↗</a>` : ''}
+            ${v.mp4 ? `<button class="btn yt largo" onclick="enviarVideo(${i},'youtube')">📤 Enviar no YouTube${v.formato === 'longo' ? ' (+ Short)' : ''}</button>` : ''}
+            ${v.mp4 && v.formato !== 'longo' ? `<button class="btn ambos largo" onclick="enviarVideo(${i},'ambos')">🚀 Enviar em ambos (YouTube + TikTok)</button>` : ''}
           </div>
         </div>
       </article>`).join('');
