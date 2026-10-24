@@ -172,3 +172,142 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
     dados.setdefault("hashtags", ["#shorts"])
     dados["titulo"] = dados["titulo"][:95]
     return dados
+
+
+# ───────────────────────── VÍDEO LONGO (YouTube 16:9) ─────────────────────────
+PROMPT_LONGO = """Você é roteirista de um canal do YouTube de vídeos longos e envolventes.
+
+Nicho do canal: {nicho}
+{tema_linha}
+Assuntos que JÁ foram usados (não repita): {usados}
+
+Escreva o roteiro de UM vídeo em {idioma} de cerca de {minutos} minutos de narração
+(no total, NO MÍNIMO {palavras} palavras), no formato de lista/top ou de história em capítulos.
+
+Estrutura obrigatória:
+- Parte 1 = introdução: gancho forte nos primeiros 10 segundos, diga o que a pessoa vai descobrir e peça para se inscrever no canal.
+- Partes do meio: {partes_meio} partes, cada uma com um subtítulo e de {por_parte} palavras,
+  com fatos verdadeiros, exemplos, números e curiosidades. Faça transições que prendam ("mas o mais estranho ainda está por vir").
+- Última parte = conclusão curta + pergunta para comentarem + convite para se inscrever.
+
+Regras: linguagem falada, frases curtas, sem emojis, sem indicações de cena, só fatos verdadeiros e verificáveis.
+
+Responda SOMENTE com um JSON neste formato:
+{{
+  "assunto": "assunto em poucas palavras",
+  "titulo": "título chamativo para YouTube com até 70 caracteres",
+  "descricao": "descrição de 3 a 5 frases para o YouTube, com palavras-chave",
+  "hashtags": ["#curiosidades", "#outra", "#outra"],
+  "partes": [
+    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 termos de busca EM INGLÊS para vídeos de banco, ex: 'deep ocean'"]}}
+  ]
+}}"""
+
+
+def _contar(dados: dict) -> int:
+    return sum(len(str(p.get("texto", "")).split()) for p in dados.get("partes", []))
+
+
+def gerar_longo(tema: str | None, usados: list[str]) -> dict:
+    """Roteiro em partes para o vídeo longo. Retorna também 'roteiro' (texto inteiro)."""
+    if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
+        raise RuntimeError("O vídeo longo precisa da IA do roteiro (GROQ_API_KEY).")
+    minutos = config.DURACAO_LONGO_MINUTOS
+    palavras = int(minutos * 60 * 2.5)
+    partes_meio = max(4, min(10, minutos))
+    prompt = PROMPT_LONGO.format(
+        nicho=config.NICHO,
+        tema_linha=f"Tema obrigatório deste vídeo: {tema}" if tema else "Escolha você um assunto com muito potencial de busca no YouTube.",
+        usados=", ".join(usados[-60:]) or "nenhum",
+        idioma=config.IDIOMA,
+        minutos=minutos,
+        palavras=palavras,
+        partes_meio=partes_meio,
+        por_parte=int(palavras * 0.85 / partes_meio),
+    )
+    pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
+    dados = pedir(prompt)
+    for _ in range(2):
+        qtd = _contar(dados)
+        if qtd >= palavras * 0.8 and len(dados.get("partes", [])) >= 4:
+            break
+        print(f"   roteiro longo com {qtd} palavras (meta {palavras}), pedindo versão maior...")
+        dados = pedir(prompt + f"\n\nATENÇÃO: a versão anterior tinha só {qtd} palavras no total. "
+                               f"Escreva de novo com NO MÍNIMO {palavras} palavras, desenvolvendo bem cada parte.")
+
+    partes = [p for p in dados.get("partes", []) if str(p.get("texto", "")).strip()]
+    if len(partes) < 3:
+        raise ValueError("Roteiro longo veio sem partes suficientes.")
+    for p in partes:
+        p["titulo"] = str(p.get("titulo") or "Parte").strip()[:60]
+        p["cenas"] = [c for c in p.get("cenas", []) if str(c).strip()][:6] or [dados.get("assunto", "nature")]
+    dados["partes"] = partes
+    dados["roteiro"] = "\n\n".join(p["texto"] for p in partes)
+    dados["cenas"] = [c for p in partes for c in p["cenas"]]
+    dados.setdefault("assunto", dados.get("titulo", "vídeo longo"))
+    dados.setdefault("descricao", "")
+    dados.setdefault("hashtags", ["#curiosidades"])
+    dados["titulo"] = str(dados.get("titulo", dados["assunto"]))[:95]
+    print(f"   roteiro longo: {len(partes)} partes, {_contar(dados)} palavras")
+    return dados
+
+
+# ───────────────────────── TÍTULO E DESCRIÇÃO VIRALIZANTES ─────────────────────────
+PROMPT_VIRAL = """Você é especialista em crescimento de canais no TikTok e no YouTube, focado em {idioma}.
+Crie os textos de publicação deste vídeo para MAXIMIZAR cliques, retenção e alcance.
+
+Formato do vídeo: {formato_desc}
+Nicho: {nicho}
+Assunto: {assunto}
+Roteiro (resumo): {resumo}
+
+Técnicas obrigatórias:
+- Título com "lacuna de curiosidade": desperta a pergunta sem entregar a resposta.
+  Use número, contraste, segredo, exagero plausível ou "ninguém te conta". Palavra-chave do assunto no começo.
+- Nada de mentira ou promessa que o vídeo não cumpre (isso derruba a retenção e o alcance).
+- Escreva como gente fala, sem soar como propaganda.
+
+Responda SOMENTE com um JSON:
+{{
+  "titulo_youtube": "até 60 caracteres, com 1 palavra em MAIÚSCULAS para destacar, palavra-chave no início",
+  "descricao_youtube": "3 a 5 frases: a 1ª repete a promessa do título com a palavra-chave; depois resume o que a pessoa vai aprender; termina pedindo inscrição e comentário com uma pergunta",
+  "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
+  "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
+  "hashtags_youtube": ["3 a 5 hashtags relevantes"],
+  "tags_youtube": ["10 a 15 palavras-chave de busca em português, do específico ao amplo"]
+}}"""
+
+
+def textos_virais(dados: dict, formato: str = "curto") -> dict:
+    """Gera título, descrição e hashtags otimizados para cada rede e junta em `dados`."""
+    if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
+        return dados
+    pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
+    prompt = PROMPT_VIRAL.format(
+        idioma=config.IDIOMA,
+        formato_desc="vídeo curto vertical (TikTok / YouTube Shorts)" if formato == "curto"
+        else "vídeo longo horizontal para YouTube, com capítulos",
+        nicho=config.NICHO,
+        assunto=dados.get("assunto", ""),
+        resumo=str(dados.get("roteiro", ""))[:1800],
+    )
+    try:
+        v = pedir(prompt)
+    except Exception as erro:
+        print(f"   ⚠️  não consegui gerar os textos virais ({erro}); usando os do roteiro.")
+        return dados
+
+    def lista(chave, limite):
+        itens = [str(h).strip() for h in v.get(chave, []) if str(h).strip()]
+        return [h if h.startswith("#") or chave.startswith("tags") else "#" + h.replace(" ", "") for h in itens][:limite]
+
+    if v.get("titulo_youtube"):
+        dados["titulo"] = str(v["titulo_youtube"]).strip()[:95]
+    if v.get("descricao_youtube"):
+        dados["descricao"] = str(v["descricao_youtube"]).strip()
+    dados["legenda_tiktok"] = str(v.get("legenda_tiktok") or dados.get("titulo", "")).strip()
+    dados["hashtags_tiktok"] = lista("hashtags_tiktok", 7) or dados.get("hashtags", [])
+    dados["hashtags"] = lista("hashtags_youtube", 5) or dados.get("hashtags", [])
+    dados["tags_youtube"] = lista("tags_youtube", 15)
+    print(f"   ✨ título viral: {dados['titulo']}")
+    return dados

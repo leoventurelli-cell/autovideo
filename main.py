@@ -48,23 +48,29 @@ def _proximo_tema_da_lista() -> str | None:
 
 
 def _legenda(r: dict) -> str:
+    """Legenda pronta para colar no TikTok (gancho + pergunta + hashtags)."""
+    if r.get("legenda_tiktok"):
+        return f"{r['legenda_tiktok']}\n\n{' '.join(r.get('hashtags_tiktok', []))}".strip()
     return f"{r['titulo']}\n\n{r.get('descricao', '')}\n\n{' '.join(r.get('hashtags', []))}".strip()
 
 
-def _preparar_download(r: dict, destino) -> str | None:
-    """No GitHub, o MP4 vira um 'Release' público com link direto de download.
-    Aqui só anotamos o nome; o envio do arquivo é feito pelo workflow."""
+def _preparar_download(r: dict, destino, capa=None) -> tuple[str | None, str | None]:
+    """No GitHub, o MP4 (e a capa) viram um 'Release' público com link direto de download.
+    Aqui só anotamos os nomes; o envio dos arquivos é feito pelo workflow."""
     repo = os.getenv("GITHUB_REPOSITORY")
     if not repo:
-        return None
+        return None, None
     tag = f"video-{datetime.now():%Y%m%d-%H%M}-{os.getenv('GITHUB_RUN_NUMBER', '0')}"
+    arquivos = [str(destino)] + ([str(capa)] if capa else [])
     (config.PASTA_SAIDA / "release.json").write_text(json.dumps({
-        "tag": tag, "arquivo": str(destino), "titulo": r["titulo"][:120], "legenda": _legenda(r),
+        "tag": tag, "arquivos": arquivos, "titulo": r["titulo"][:120], "legenda": _legenda(r),
     }, ensure_ascii=False), encoding="utf-8")
-    return f"{os.getenv('GITHUB_SERVER_URL', 'https://github.com')}/{repo}/releases/download/{tag}/{destino.name}"
+    base = f"{os.getenv('GITHUB_SERVER_URL', 'https://github.com')}/{repo}/releases/download/{tag}"
+    return f"{base}/{destino.name}", (f"{base}/{capa.name}" if capa else None)
 
 
-def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: float):
+def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: float,
+                         formato: str = "curto", capa: str | None = None):
     """Adiciona o vídeo em docs/videos.json, que o painel (GitHub Pages) mostra."""
     arquivo = config.PASTA / "docs" / "videos.json"
     if not arquivo.parent.exists():
@@ -75,9 +81,11 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
         lista = []
     item = {"data": datetime.now().astimezone().isoformat(timespec="seconds"),
             "titulo": r["titulo"], "assunto": r.get("assunto", ""),
-            "legenda": _legenda(r), "segundos": round(segundos), **resultados}
+            "legenda": _legenda(r), "segundos": round(segundos), "formato": formato, **resultados}
     if mp4:
         item["mp4"] = mp4
+    if capa:
+        item["capa"] = capa
     if os.getenv("GITHUB_RUN_ID"):
         item["execucao"] = (f"{os.getenv('GITHUB_SERVER_URL')}/{os.getenv('GITHUB_REPOSITORY')}"
                             f"/actions/runs/{os.getenv('GITHUB_RUN_ID')}")
@@ -98,15 +106,19 @@ def _status_no_painel(**redes):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tema", help="assunto específico para este vídeo")
+    ap.add_argument("--formato", choices=["curto", "longo"], default=os.getenv("FORMATO") or "curto",
+                    help="curto = vertical (TikTok/Shorts) · longo = horizontal (YouTube)")
     ap.add_argument("--sem-publicar", action="store_true", help="só gera o vídeo")
     ap.add_argument("--manter-arquivos", action="store_true", help="não apaga clipes e cenas intermediárias")
     args = ap.parse_args()
+    longo = args.formato == "longo"
 
     historico = _historico()
-    tema = args.tema or _proximo_tema_da_lista()
+    tema = args.tema or (None if longo else _proximo_tema_da_lista())
 
-    print("🧠 Escrevendo o roteiro...")
-    r = gerador_roteiro.gerar(tema, historico)
+    print(f"🧠 Escrevendo o roteiro ({args.formato})...")
+    r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
+    r = gerador_roteiro.textos_virais(r, args.formato)
     print(f"   → {r['titulo']}")
 
     pasta = config.PASTA_SAIDA / f"{datetime.now():%Y-%m-%d_%H%M}_{_slug(r['assunto'])}"
@@ -115,14 +127,23 @@ def main():
 
     print("🎙️  Gravando a narração...")
     audio = pasta / "narracao.mp3"
-    palavras = voz.gerar(r["roteiro"], audio)
+    inicios = None
+    if longo:
+        palavras, inicios = voz.gerar_partes([p["texto"] for p in r["partes"]], audio)
+    else:
+        palavras = voz.gerar(r["roteiro"], audio)
 
-    final = video.montar(r, audio, palavras, pasta)
+    final = video.montar(r, audio, palavras, pasta, formato=args.formato, inicios_partes=inicios)
     destino = pasta / f"{_slug(r['titulo'])}.mp4"
     final.rename(destino)
     segundos = video.duracao(destino)
-    print(f"✅ Vídeo pronto: {destino} ({segundos:.0f}s)")
-    mp4 = _preparar_download(r, destino)
+    print(f"✅ Vídeo pronto: {destino} ({segundos / 60:.1f} min)")
+
+    capa, capitulos = None, None
+    if longo:
+        capa = video.criar_capa(destino, r["titulo"], pasta / f"{_slug(r['titulo'])}-capa.jpg")
+        capitulos = [(t, p["titulo"]) for t, p in zip(inicios, r["partes"])]
+    mp4, capa_url = _preparar_download(r, destino, capa)
 
     if not args.manter_arquivos:
         for lixo in list(pasta.glob("clipe_*.mp4")) + list(pasta.glob("cena_*.mp4")) + [pasta / "cenas.txt"]:
@@ -132,18 +153,18 @@ def main():
     _salvar_historico(historico)
 
     if args.sem_publicar:
-        _registrar_no_painel(r, {}, mp4, segundos)
+        _registrar_no_painel(r, {}, mp4, segundos, args.formato, capa_url)
         return
 
     import tiktok_token
-    youtube_ok = bool(config.YT_CLIENT_ID and config.YT_CLIENT_SECRET and config.YT_REFRESH_TOKEN)
-    redes = [
-        ("youtube", config.PUBLICAR_YOUTUBE, youtube_ok, "publicar_youtube"),
-        ("tiktok", config.PUBLICAR_TIKTOK, tiktok_token.conectado(), "publicar_tiktok"),
-    ]
-    _status_no_painel(youtube=youtube_ok, tiktok=tiktok_token.conectado())
+    import youtube_token
+    redes = [("youtube", config.PUBLICAR_YOUTUBE, youtube_token.conectado())]
+    if not longo:  # vídeo horizontal longo não combina com TikTok
+        redes.append(("tiktok", config.PUBLICAR_TIKTOK, tiktok_token.conectado()))
+    _status_no_painel(youtube=youtube_token.conectado(), tiktok=tiktok_token.conectado())
+
     resultados, falhou = {}, False
-    for nome, ligado, conectado, modulo in redes:
+    for nome, ligado, conectado in redes:
         if not ligado:
             continue
         if not conectado:
@@ -151,7 +172,12 @@ def main():
             continue
         print(f"📤 Publicando no {nome}...")
         try:
-            resultados[nome] = __import__(modulo).publicar(destino, r)
+            if nome == "youtube":
+                import publicar_youtube
+                resultados[nome] = publicar_youtube.publicar(destino, r, args.formato, capitulos, capa)
+            else:
+                import publicar_tiktok
+                resultados[nome] = publicar_tiktok.publicar(destino, r)
         except Exception:
             falhou = True
             resultados[nome] = "ERRO"
@@ -160,7 +186,7 @@ def main():
     (pasta / "publicacao.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding="utf-8")
     for rede, res in resultados.items():
         print(f"   {rede}: {res}")
-    _registrar_no_painel(r, resultados, mp4, segundos)
+    _registrar_no_painel(r, resultados, mp4, segundos, args.formato, capa_url)
     if falhou:
         raise SystemExit(1)
 

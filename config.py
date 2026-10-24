@@ -35,6 +35,8 @@ def _env(nome: str, padrao: str = "") -> str:
 NICHO = _env("NICHO", "curiosidades incríveis e pouco conhecidas sobre o mundo")
 IDIOMA = "português do Brasil"
 DURACAO_ALVO_SEGUNDOS = int(_env("DURACAO_ALVO", "75"))  # TikTok paga só vídeos com mais de 1 minuto
+# Vídeo longo (YouTube, horizontal 16:9). Acima de 8 minutos o YouTube libera anúncios no meio do vídeo.
+DURACAO_LONGO_MINUTOS = int(_env("DURACAO_LONGO", "8"))
 
 # ───────────────────────── IA DO ROTEIRO ─────────────────────────
 # Groq (grátis): https://console.groq.com/keys — se houver chave, ele é usado.

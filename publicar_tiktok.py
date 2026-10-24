@@ -62,8 +62,11 @@ def _plano_de_pedacos(tamanho: int):
 
 
 def legenda(roteiro: dict) -> str:
-    hashtags = " ".join(roteiro.get("hashtags", []))
-    return f"{roteiro['titulo']}\n\n{roteiro.get('descricao', '')}\n\n{hashtags}".strip()[:2200]
+    if roteiro.get("legenda_tiktok"):
+        texto = f"{roteiro['legenda_tiktok']}\n\n{' '.join(roteiro.get('hashtags_tiktok', []))}"
+    else:
+        texto = f"{roteiro['titulo']}\n\n{roteiro.get('descricao', '')}\n\n{' '.join(roteiro.get('hashtags', []))}"
+    return texto.strip()[:2200]
 
 
 def _iniciar(cab, arquivo, roteiro, direto: bool):

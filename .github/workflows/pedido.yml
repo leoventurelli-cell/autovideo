@@ -1,0 +1,31 @@
+name: Pedido de vídeo
+
+# O painel abre um "pedido" (issue) com o tema escolhido. Só pedidos do dono do
+# repositório são aceitos; aí este workflow dispara o "Vídeo diário" com o tema.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  actions: write
+  issues: write
+
+jobs:
+  pedido:
+    if: github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '[')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar o vídeo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITULO: ${{ github.event.issue.title }}
+          NUMERO: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          FORMATO=curto
+          case "$TITULO" in "[longo]"*) FORMATO=longo ;; esac
+          TEMA=$(printf '%s' "$TITULO" | sed -E 's/^\[[a-z]+\][[:space:]]*//')
+          gh workflow run diario.yml -R "$REPO" -f formato="$FORMATO" -f tema="$TEMA" -f publicar=true
+          gh issue comment "$NUMERO" -R "$REPO" --body "🎬 Pedido recebido! Gerando vídeo **$FORMATO** sobre: **$TEMA**. Em alguns minutos ele aparece no painel: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          gh issue close "$NUMERO" -R "$REPO"

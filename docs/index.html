@@ -45,6 +45,19 @@
   .tag.erro{border-color:var(--vermelho);color:var(--vermelho)}
   .botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
   .botoes .largo{grid-column:1/-1}
+  .dica{color:var(--fraco);font-size:13px;margin-top:10px;line-height:1.6}
+  .criar{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:18px;margin-bottom:16px}
+  .criar form{display:grid;grid-template-columns:1fr auto auto;gap:10px}
+  .criar input,.criar select{background:var(--bg);border:1px solid var(--borda);color:var(--texto);border-radius:12px;padding:12px 14px;font:inherit;font-size:15px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{background:var(--card2);border:1px solid var(--borda);color:var(--texto);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+  .chip:hover{border-color:var(--amarelo)}
+  @media(max-width:640px){.criar form{grid-template-columns:1fr}}
+  .dica b{color:var(--texto)}
+  .video.longo{grid-column:span 2}
+  .video.longo video{aspect-ratio:16/9}
+  .fmt{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--fraco);margin-left:6px;vertical-align:middle}
+  @media(max-width:640px){.video.longo{grid-column:auto}}
   .passos{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px 16px;color:var(--fraco);font-size:13px;line-height:1.7;margin-bottom:14px}
   .passos b{color:var(--texto)}
   .vazio{color:var(--fraco);text-align:center;padding:40px;border:1px dashed var(--borda);border-radius:16px}
@@ -64,7 +77,7 @@
 
   <!-- aparece quando o TikTok devolve o código de autorização -->
   <section class="aviso" id="retorno">
-    <b>✅ TikTok autorizado! Falta 1 passo:</b>
+    <b>✅ <span id="rede-retorno">TikTok</span> autorizado! Falta 1 passo:</b>
     <ol>
       <li>Clique em <button class="btn" onclick="copiar(codigoTikTok)">📋 Copiar código</button></li>
       <li>Clique em <a class="btn amarelo" id="concluir" target="_blank">Concluir conexão ↗</a> → <b>Run workflow</b> → cole o código → <b>Run workflow</b></li>
@@ -72,10 +85,22 @@
     <p style="color:var(--fraco);font-size:13px;margin-top:8px">O código vale poucos minutos: faça logo em seguida.</p>
   </section>
 
+  <section class="criar">
+    <h2 style="margin-top:0">🔎 Criar vídeo sobre…</h2>
+    <form id="form-criar" onsubmit="pedirVideo(event)">
+      <input id="tema" placeholder="Digite o assunto. Ex: por que o mar é salgado" autocomplete="off" required>
+      <select id="formato"><option value="curto">Curto (TikTok/Shorts)</option><option value="longo">Longo (YouTube)</option></select>
+      <button class="btn amarelo" type="submit">Criar vídeo</button>
+    </form>
+    <div id="sugestoes" class="chips"></div>
+    <p class="dica" id="dica-pedido" style="display:none">Abriu a página do pedido no GitHub: só clique em <b>Create</b> (ou <b>Submit new issue</b>). O vídeo aparece aqui em alguns minutos.</p>
+  </section>
+
   <div class="acoes">
     <a class="btn amarelo grande" id="gerar" target="_blank">🎬 Gerar vídeo agora</a>
     <a class="btn grande" id="execucoes" target="_blank">📋 Ver execuções</a>
   </div>
+  <p class="dica">Em <b>Gerar vídeo agora</b> → <b>Run workflow</b>, escolha o formato: <b>curto</b> (vertical, TikTok/Shorts) ou <b>longo</b> (horizontal, ~8 min, YouTube). Automático: curto todo dia às 11h47 e longo todo domingo às 10h17.</p>
 
   <h2>Redes conectadas</h2>
   <div class="redes">
@@ -86,7 +111,8 @@
     </div>
     <div class="rede">
       <div><b>YouTube</b> <span class="pill" id="yt-status">não conectado</span></div>
-      <small>Publica como Short com título, descrição e hashtags. A conexão é feita uma vez, com o Claude te guiando.</small>
+      <small>Publica os curtos como Shorts e os longos como vídeo normal, com capítulos e capa automática.</small>
+      <button class="btn" id="yt-conectar" onclick="conectarYouTube()" style="background:#ff0000;border:none;color:#fff">Conectar YouTube</button>
     </div>
   </div>
 
@@ -127,13 +153,21 @@
   // ── TikTok: retorno da autorização ──
   const params = new URLSearchParams(location.search);
   const codigoTikTok = params.get('code') || '';
-  if (codigoTikTok) $('retorno').style.display = 'block';
+  const voltouDoYouTube = (params.get('state') || '').startsWith('yt-') || params.has('scope') && (params.get('scope') || '').includes('googleapis');
+  if (codigoTikTok) {
+    $('retorno').style.display = 'block';
+    if (voltouDoYouTube) {
+      $('rede-retorno').textContent = 'YouTube';
+      $('concluir').href = `${base}/actions/workflows/conectar_youtube.yml`;
+    }
+    history.replaceState(null, '', location.pathname);  // evita reusar um código vencido ao recarregar
+  }
   if (params.get('error')) alert('O TikTok não autorizou: ' + (params.get('error_description') || params.get('error')));
 
   let cfg = {};
   async function conectarTikTok(){
     if (!cfg.tiktok_client_key) { alert('Primeiro cadastre o app no TikTok for Developers e passe o Client key pro Claude.'); return; }
-    const estado = Math.random().toString(36).slice(2);
+    const estado = 'tt-' + Math.random().toString(36).slice(2);
     const url = 'https://www.tiktok.com/v2/auth/authorize/?' + new URLSearchParams({
       client_key: cfg.tiktok_client_key,
       scope: 'user.info.basic,video.upload,video.publish',
@@ -143,6 +177,41 @@
     });
     location.href = url;
   }
+
+  function conectarYouTube(){
+    if (!cfg.youtube_client_id) { alert('Primeiro crie a credencial no Google Cloud e passe o ID do cliente pro Claude.'); return; }
+    location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: cfg.youtube_client_id,
+      redirect_uri: site,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/youtube.upload',
+      access_type: 'offline',
+      prompt: 'consent',
+      include_granted_scopes: 'true',
+      state: 'yt-' + Math.random().toString(36).slice(2),
+    });
+  }
+
+  function pedirVideo(ev){
+    ev.preventDefault();
+    const tema = $('tema').value.trim();
+    if (!tema) return;
+    const formato = $('formato').value;
+    const url = `${base}/issues/new?` + new URLSearchParams({
+      title: `[${formato}] ${tema}`,
+      body: 'Pedido de vídeo feito pelo painel AutoVídeo. É só clicar em Create para começar.',
+    });
+    window.open(url, '_blank');
+    $('dica-pedido').style.display = 'block';
+  }
+
+  fetch('sugestoes.json?' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null).then(s => {
+    const temas = (s && s.temas) || [];
+    if (!temas.length) return;
+    $('sugestoes').innerHTML = '<span class="dica" style="margin:0 4px 0 0">💡 Em alta:</span>' +
+      temas.map(t => `<button type="button" class="chip">${esc(t)}</button>`).join('');
+    $('sugestoes').querySelectorAll('.chip').forEach(b => b.onclick = () => { $('tema').value = b.textContent; $('tema').focus(); });
+  });
 
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   function tag(nome, valor){
@@ -160,25 +229,25 @@
   ]).then(([c, videos]) => {
     cfg = c || {};
     if (cfg.tiktok_conectado) { $('tt-status').textContent = 'conectado'; $('tt-status').classList.add('ok'); $('tt-conectar').textContent = 'Reconectar TikTok'; }
-    if (cfg.youtube_conectado) { $('yt-status').textContent = 'conectado'; $('yt-status').classList.add('ok'); }
+    if (cfg.youtube_conectado) { $('yt-status').textContent = 'conectado' + (cfg.youtube_canal ? ': ' + cfg.youtube_canal : ''); $('yt-status').classList.add('ok'); $('yt-conectar').textContent = 'Reconectar YouTube'; }
 
     videos = (videos || []).slice().reverse();
     $('total').textContent = videos.length;
     window._videos = videos;
     if (!videos.length) { $('lista').innerHTML = '<div class="vazio">Nenhum vídeo ainda. Clique em <b>Gerar vídeo agora</b> → <b>Run workflow</b>.</div>'; return; }
     $('lista').innerHTML = videos.map((v, i) => `
-      <article class="video">
+      <article class="video ${v.formato === 'longo' ? 'longo' : ''}">
         ${v.mp4
-          ? `<video src="${esc(v.mp4)}" controls preload="none" playsinline poster=""></video>`
+          ? `<video src="${esc(v.mp4)}" controls preload="none" playsinline poster="${esc(v.capa || '')}"></video>`
           : `<div class="sem">Vídeo feito antes do download direto.<br>${v.execucao || v.download ? `<a href="${esc(v.execucao || v.download)}" target="_blank">Baixar pela execução ↗</a>` : ''}</div>`}
         <div class="corpo">
-          <h3>${esc(v.titulo)}</h3>
-          <div class="data">${new Date(v.data).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}${v.segundos ? ' · ' + v.segundos + 's' : ''}</div>
+          <h3>${esc(v.titulo)}<span class="fmt">${v.formato === 'longo' ? 'LONGO 16:9' : 'CURTO 9:16'}</span></h3>
+          <div class="data">${new Date(v.data).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}${v.segundos ? ' · ' + (v.segundos >= 120 ? Math.round(v.segundos / 60) + ' min' : v.segundos + 's') : ''}</div>
           <div class="tags">${tag('YouTube', v.youtube)}${tag('TikTok', v.tiktok)}</div>
           <div class="botoes">
             ${v.mp4 ? `<a class="btn amarelo" href="${esc(v.mp4)}" download>⬇ Baixar</a>` : '<span></span>'}
             <button class="btn" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">📋 Legenda</button>
-            ${v.mp4 ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">Postar no TikTok ↗</a>` : ''}
+            ${v.mp4 && v.formato !== 'longo' ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">Postar no TikTok ↗</a>` : ''}
           </div>
         </div>
       </article>`).join('');

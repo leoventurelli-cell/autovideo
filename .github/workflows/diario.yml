@@ -2,10 +2,17 @@ name: Vídeo diário
 
 on:
   schedule:
-    # Todo dia às 11:47 de Brasília (14:47 UTC). Para 2 vídeos/dia, adicione outra linha.
+    # Vídeo curto todo dia às 11:47 de Brasília (14:47 UTC)
     - cron: "47 14 * * *"
+    # Vídeo longo (YouTube) todo domingo às 10:17 de Brasília
+    - cron: "17 13 * * 0"
   workflow_dispatch:   # botão "Run workflow" para rodar na hora
     inputs:
+      formato:
+        description: "Formato do vídeo"
+        type: choice
+        options: [curto, longo]
+        default: curto
       tema:
         description: "Tema específico (opcional)"
         required: false
@@ -20,7 +27,7 @@ permissions:
 jobs:
   video:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       TZ: America/Sao_Paulo
     steps:
@@ -46,7 +53,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_ID: ${{ vars.YT_CLIENT_ID || secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY || secrets.TIKTOK_CLIENT_KEY }}
@@ -60,6 +67,7 @@ jobs:
           PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
           PUBLICAR_TIKTOK: ${{ vars.PUBLICAR_TIKTOK }}
           TEMA: ${{ github.event.inputs.tema }}
+          FORMATO: ${{ github.event.inputs.formato || (github.event.schedule == '17 13 * * 0' && 'longo') || 'curto' }}
           SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
         run: |
           ARGS=()
@@ -72,18 +80,29 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=$(python -c "import json;print(json.load(open('saida/release.json'))['tag'])")
-          ARQ=$(python -c "import json;print(json.load(open('saida/release.json'))['arquivo'])")
-          python -c "import json;d=json.load(open('saida/release.json'));open('notas.md','w').write(d['legenda'])"
-          TIT=$(python -c "import json;print(json.load(open('saida/release.json'))['titulo'])")
-          gh release create "$TAG" "$ARQ" --title "$TIT" --notes-file notas.md --latest=false
+          python - <<'PY'
+          import json, subprocess
+          d = json.load(open("saida/release.json"))
+          open("notas.md", "w").write(d["legenda"])
+          subprocess.run(["gh", "release", "create", d["tag"], *d["arquivos"],
+                          "--title", d["titulo"], "--notes-file", "notas.md", "--latest=false"], check=True)
+          PY
+
+      - name: Novas sugestões de tema para o painel
+        if: always()
+        continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NICHO: ${{ vars.NICHO }}
+        run: python sugerir.py
 
       - name: Salvar histórico e painel
         if: always()
         run: |
           git config user.name "autovideo-bot"
           git config user.email "autovideo-bot@users.noreply.github.com"
-          for f in historico.json temas.txt docs/videos.json docs/config.json tiktok.token; do
+          for f in historico.json temas.txt docs/videos.json docs/config.json docs/sugestoes.json tiktok.token youtube.token; do
             [ -e "$f" ] && git add "$f"
           done
           git diff --cached --quiet || (git commit -m "novo vídeo" && git pull --rebase && git push)
