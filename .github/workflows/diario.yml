@@ -24,6 +24,11 @@ on:
 permissions:
   contents: write
 
+# um vídeo por vez: pedidos repetidos esperam na fila em vez de brigar ao salvar o painel
+concurrency:
+  group: painel
+  cancel-in-progress: false
+
 jobs:
   video:
     runs-on: ubuntu-latest

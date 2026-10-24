@@ -20,6 +20,7 @@ Regras do roteiro:
 - A primeira frase é um gancho forte que prende nos 2 primeiros segundos.
 - Frases curtas e diretas, linguagem falada, sem emojis, sem hashtags, sem "olá pessoal".
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
+- Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
 - Termine com uma frase curta que convide a seguir o canal ou comentar.
 - Não escreva indicações de cena, só o texto que será narrado.
 - O roteiro PRECISA ter pelo menos {palavras} palavras: desenvolva com 3 a 5 fatos, exemplos e detalhes curiosos.
@@ -191,6 +192,7 @@ Estrutura obrigatória:
 - Última parte = conclusão curta + pergunta para comentarem + convite para se inscrever.
 
 Regras: linguagem falada, frases curtas, sem emojis, sem indicações de cena, só fatos verdadeiros e verificáveis.
+Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números.
 
 Responda SOMENTE com um JSON neste formato:
 {{
@@ -265,6 +267,7 @@ Técnicas obrigatórias:
 - Título com "lacuna de curiosidade": desperta a pergunta sem entregar a resposta.
   Use número, contraste, segredo, exagero plausível ou "ninguém te conta". Palavra-chave do assunto no começo.
 - Nada de mentira ou promessa que o vídeo não cumpre (isso derruba a retenção e o alcance).
+- Eleição/política: nada de "resultado cravado" ou "vai ganhar com certeza"; use "análise", "o que as pesquisas mostram".
 - Escreva como gente fala, sem soar como propaganda.
 
 Responda SOMENTE com um JSON:
