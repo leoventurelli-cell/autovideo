@@ -69,8 +69,24 @@ def _preparar_download(r: dict, destino, capa=None) -> tuple[str | None, str | N
     return f"{base}/{destino.name}", (f"{base}/{capa.name}" if capa else None)
 
 
+def _textos_para_colar(r: dict, formato: str, capitulos=None) -> dict:
+    """Título, legenda e hashtags separados, para o painel mostrar com botão Copiar."""
+    try:
+        import publicar_youtube
+        desc_yt = publicar_youtube.descricao(r, formato, capitulos)
+    except Exception:
+        desc_yt = f"{r.get('descricao', '')}\n\n{' '.join(r.get('hashtags', []))}".strip()
+    return {
+        "titulo_youtube": r["titulo"],
+        "descricao_youtube": desc_yt,
+        "legenda_tiktok": r.get("legenda_tiktok") or r["titulo"],
+        "hashtags_tiktok": " ".join(r.get("hashtags_tiktok") or r.get("hashtags", [])),
+        "tags_youtube": ", ".join(r.get("tags_youtube", [])),
+    }
+
+
 def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: float,
-                         formato: str = "curto", capa: str | None = None):
+                         formato: str = "curto", capa: str | None = None, capitulos=None):
     """Adiciona o vídeo em docs/videos.json, que o painel (GitHub Pages) mostra."""
     arquivo = config.PASTA / "docs" / "videos.json"
     if not arquivo.parent.exists():
@@ -81,7 +97,8 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
         lista = []
     item = {"data": datetime.now().astimezone().isoformat(timespec="seconds"),
             "titulo": r["titulo"], "assunto": r.get("assunto", ""),
-            "legenda": _legenda(r), "segundos": round(segundos), "formato": formato, **resultados}
+            "legenda": _legenda(r), "segundos": round(segundos), "formato": formato,
+            "textos": _textos_para_colar(r, formato, capitulos), **resultados}
     if mp4:
         item["mp4"] = mp4
     if capa:
@@ -153,7 +170,7 @@ def main():
     _salvar_historico(historico)
 
     if args.sem_publicar:
-        _registrar_no_painel(r, {}, mp4, segundos, args.formato, capa_url)
+        _registrar_no_painel(r, {}, mp4, segundos, args.formato, capa_url, capitulos)
         return
 
     import tiktok_token
@@ -186,7 +203,7 @@ def main():
     (pasta / "publicacao.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding="utf-8")
     for rede, res in resultados.items():
         print(f"   {rede}: {res}")
-    _registrar_no_painel(r, resultados, mp4, segundos, args.formato, capa_url)
+    _registrar_no_painel(r, resultados, mp4, segundos, args.formato, capa_url, capitulos)
     if falhou:
         raise SystemExit(1)
 
