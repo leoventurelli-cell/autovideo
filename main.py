@@ -47,7 +47,24 @@ def _proximo_tema_da_lista() -> str | None:
     return linhas[0].strip()
 
 
-def _registrar_no_painel(r: dict, resultados: dict):
+def _legenda(r: dict) -> str:
+    return f"{r['titulo']}\n\n{r.get('descricao', '')}\n\n{' '.join(r.get('hashtags', []))}".strip()
+
+
+def _preparar_download(r: dict, destino) -> str | None:
+    """No GitHub, o MP4 vira um 'Release' público com link direto de download.
+    Aqui só anotamos o nome; o envio do arquivo é feito pelo workflow."""
+    repo = os.getenv("GITHUB_REPOSITORY")
+    if not repo:
+        return None
+    tag = f"video-{datetime.now():%Y%m%d-%H%M}-{os.getenv('GITHUB_RUN_NUMBER', '0')}"
+    (config.PASTA_SAIDA / "release.json").write_text(json.dumps({
+        "tag": tag, "arquivo": str(destino), "titulo": r["titulo"][:120], "legenda": _legenda(r),
+    }, ensure_ascii=False), encoding="utf-8")
+    return f"{os.getenv('GITHUB_SERVER_URL', 'https://github.com')}/{repo}/releases/download/{tag}/{destino.name}"
+
+
+def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: float):
     """Adiciona o vídeo em docs/videos.json, que o painel (GitHub Pages) mostra."""
     arquivo = config.PASTA / "docs" / "videos.json"
     if not arquivo.parent.exists():
@@ -57,12 +74,25 @@ def _registrar_no_painel(r: dict, resultados: dict):
     except Exception:
         lista = []
     item = {"data": datetime.now().astimezone().isoformat(timespec="seconds"),
-            "titulo": r["titulo"], "assunto": r.get("assunto", ""), **resultados}
+            "titulo": r["titulo"], "assunto": r.get("assunto", ""),
+            "legenda": _legenda(r), "segundos": round(segundos), **resultados}
+    if mp4:
+        item["mp4"] = mp4
     if os.getenv("GITHUB_RUN_ID"):
-        item["download"] = (f"{os.getenv('GITHUB_SERVER_URL')}/{os.getenv('GITHUB_REPOSITORY')}"
+        item["execucao"] = (f"{os.getenv('GITHUB_SERVER_URL')}/{os.getenv('GITHUB_REPOSITORY')}"
                             f"/actions/runs/{os.getenv('GITHUB_RUN_ID')}")
     lista.append(item)
     arquivo.write_text(json.dumps(lista[-500:], ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def _status_no_painel(**redes):
+    painel = config.PASTA / "docs" / "config.json"
+    if not painel.exists():
+        return
+    cfg = json.loads(painel.read_text(encoding="utf-8"))
+    for rede, ok in redes.items():
+        cfg[f"{rede}_conectado"] = bool(ok)
+    painel.write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def main():
@@ -90,7 +120,9 @@ def main():
     final = video.montar(r, audio, palavras, pasta)
     destino = pasta / f"{_slug(r['titulo'])}.mp4"
     final.rename(destino)
-    print(f"✅ Vídeo pronto: {destino} ({video.duracao(destino):.0f}s)")
+    segundos = video.duracao(destino)
+    print(f"✅ Vídeo pronto: {destino} ({segundos:.0f}s)")
+    mp4 = _preparar_download(r, destino)
 
     if not args.manter_arquivos:
         for lixo in list(pasta.glob("clipe_*.mp4")) + list(pasta.glob("cena_*.mp4")) + [pasta / "cenas.txt"]:
@@ -100,33 +132,35 @@ def main():
     _salvar_historico(historico)
 
     if args.sem_publicar:
-        _registrar_no_painel(r, {})
+        _registrar_no_painel(r, {}, mp4, segundos)
         return
 
+    import tiktok_token
+    youtube_ok = bool(config.YT_CLIENT_ID and config.YT_CLIENT_SECRET and config.YT_REFRESH_TOKEN)
+    redes = [
+        ("youtube", config.PUBLICAR_YOUTUBE, youtube_ok, "publicar_youtube"),
+        ("tiktok", config.PUBLICAR_TIKTOK, tiktok_token.conectado(), "publicar_tiktok"),
+    ]
+    _status_no_painel(youtube=youtube_ok, tiktok=tiktok_token.conectado())
     resultados, falhou = {}, False
-    if config.PUBLICAR_YOUTUBE:
-        print("📤 Publicando no YouTube...")
+    for nome, ligado, conectado, modulo in redes:
+        if not ligado:
+            continue
+        if not conectado:
+            print(f"⏭️  {nome}: ainda não conectado, pulando (o vídeo fica para download no painel).")
+            continue
+        print(f"📤 Publicando no {nome}...")
         try:
-            import publicar_youtube
-            resultados["youtube"] = publicar_youtube.publicar(destino, r)
+            resultados[nome] = __import__(modulo).publicar(destino, r)
         except Exception:
             falhou = True
-            resultados["youtube"] = "ERRO"
-            traceback.print_exc()
-    if config.PUBLICAR_TIKTOK:
-        print("📤 Publicando no TikTok...")
-        try:
-            import publicar_tiktok
-            resultados["tiktok"] = publicar_tiktok.publicar(destino, r)
-        except Exception:
-            falhou = True
-            resultados["tiktok"] = "ERRO"
+            resultados[nome] = "ERRO"
             traceback.print_exc()
 
     (pasta / "publicacao.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding="utf-8")
     for rede, res in resultados.items():
         print(f"   {rede}: {res}")
-    _registrar_no_painel(r, resultados)
+    _registrar_no_painel(r, resultados, mp4, segundos)
     if falhou:
         raise SystemExit(1)
 

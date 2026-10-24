@@ -1,0 +1,40 @@
+name: Conectar TikTok
+
+on:
+  workflow_dispatch:
+    inputs:
+      codigo:
+        description: "Cole aqui o código que apareceu no painel depois de autorizar o TikTok"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  conectar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install requests cryptography
+
+      - name: Trocar o código pelo acesso
+        env:
+          TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY || secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          CODIGO: ${{ github.event.inputs.codigo }}
+        run: python conectar_tiktok.py "$CODIGO"
+
+      - name: Guardar a conexão (criptografada)
+        run: |
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          git add tiktok.token docs/config.json
+          git commit -m "TikTok conectado"
+          git pull --rebase && git push

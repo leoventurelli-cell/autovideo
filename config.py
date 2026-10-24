@@ -71,16 +71,27 @@ YT_REFRESH_TOKEN = _env("YT_REFRESH_TOKEN", "")
 YT_CATEGORIA = _env("YT_CATEGORIA", "27")  # 27 = Educação, 24 = Entretenimento
 
 # TikTok:
+#   "direto"   → publica sozinho com título e descrição da IA. Enquanto o TikTok não
+#                aprovar seu app, ele cai automaticamente no modo rascunho.
 #   "rascunho" → manda o vídeo para a caixa de entrada do app; você só toca em Publicar.
-#                Funciona sem auditoria e o vídeo sai PÚBLICO.
-#   "direto"   → publica sozinho. Sem auditoria do TikTok, fica visível só pra você.
-TIKTOK_MODO = _env("TIKTOK_MODO", "rascunho")
+TIKTOK_MODO = _env("TIKTOK_MODO", "direto")
 TIKTOK_CLIENT_KEY = _env("TIKTOK_CLIENT_KEY", "")
 TIKTOK_CLIENT_SECRET = _env("TIKTOK_CLIENT_SECRET", "")
 TIKTOK_REFRESH_TOKEN = _env("TIKTOK_REFRESH_TOKEN", "")
-TIKTOK_REDIRECT_URI = _env("TIKTOK_REDIRECT_URI", "")
-# No modo "direto" sem auditoria só "SELF_ONLY" é aceito.
-TIKTOK_PRIVACIDADE = _env("TIKTOK_PRIVACIDADE", "SELF_ONLY")
+
+
+def _site_padrao() -> str:
+    """Endereço do painel no GitHub Pages: https://usuario.github.io/repositorio/"""
+    repo = os.getenv("GITHUB_REPOSITORY", "")
+    if "/" in repo:
+        dono, nome = repo.split("/", 1)
+        return f"https://{dono.lower()}.github.io/{nome}/"
+    return ""
+
+
+TIKTOK_REDIRECT_URI = _env("TIKTOK_REDIRECT_URI", _site_padrao())
+# Se a opção não estiver liberada para a conta, usa a primeira que o TikTok permitir.
+TIKTOK_PRIVACIDADE = _env("TIKTOK_PRIVACIDADE", "PUBLIC_TO_EVERYONE")
 # Marca o post como conteúdo gerado por IA (recomendado pelas regras do TikTok)
 TIKTOK_ROTULO_IA = True
 

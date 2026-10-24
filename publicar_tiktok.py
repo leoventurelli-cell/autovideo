@@ -1,27 +1,25 @@
-"""Envia o vídeo para o TikTok pela Content Posting API (grátis)."""
-import math
+"""Envia o vídeo para o TikTok pela Content Posting API (grátis).
+
+Modo "direto": publica sozinho com título, descrição e hashtags da IA.
+Se o app ainda não passou na auditoria do TikTok e a conta é pública,
+o TikTok recusa o post direto; aí o vídeo vai para a caixa de entrada
+do app (você só toca em Publicar e cola a legenda copiada do painel).
+"""
 import os
 import time
 
 import requests
 
 import config
+import tiktok_token
 
 API = "https://open.tiktokapis.com/v2"
-ARQUIVO_TOKEN = config.PASTA / ".tiktok_refresh_token"
-
-
-def _refresh_token_atual() -> str:
-    # Se uma execução anterior recebeu um refresh token novo, ele fica salvo aqui.
-    if ARQUIVO_TOKEN.exists():
-        return ARQUIVO_TOKEN.read_text().strip()
-    return config.TIKTOK_REFRESH_TOKEN
 
 
 def _access_token() -> str:
-    refresh = _refresh_token_atual()
+    refresh = tiktok_token.carregar()
     if not (config.TIKTOK_CLIENT_KEY and config.TIKTOK_CLIENT_SECRET and refresh):
-        raise RuntimeError("Faltam TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET ou TIKTOK_REFRESH_TOKEN (rode autorizar_tiktok.py).")
+        raise RuntimeError("TikTok não conectado: use o botão 'Conectar TikTok' no painel.")
     r = requests.post(
         f"{API}/oauth/token/",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -35,20 +33,23 @@ def _access_token() -> str:
     )
     dados = r.json()
     if "access_token" not in dados:
-        raise RuntimeError(f"TikTok recusou o refresh token: {dados}")
-    novo = dados.get("refresh_token")
-    if novo and novo != refresh:
-        ARQUIVO_TOKEN.write_text(novo)
-        if os.getenv("GITHUB_ACTIONS"):
-            print("   ⚠️  O TikTok trocou o refresh token. Atualize o segredo TIKTOK_REFRESH_TOKEN no GitHub.")
+        raise RuntimeError(f"TikTok recusou a conexão (conecte de novo pelo painel): {dados.get('error_description') or dados}")
+    # o TikTok pode devolver um refresh token novo: guarda para a próxima vez
+    tiktok_token.salvar(dados.get("refresh_token") or refresh)
     return dados["access_token"]
+
+
+class ErroTikTok(RuntimeError):
+    def __init__(self, codigo, mensagem):
+        super().__init__(f"TikTok: {codigo} - {mensagem}")
+        self.codigo = codigo
 
 
 def _checar(r: requests.Response) -> dict:
     dados = r.json()
     erro = dados.get("error", {})
     if r.status_code != 200 or erro.get("code") not in (None, "ok"):
-        raise RuntimeError(f"TikTok: {r.status_code} {erro.get('code')} - {erro.get('message')}")
+        raise ErroTikTok(erro.get("code") or r.status_code, erro.get("message"))
     return dados.get("data", {})
 
 
@@ -60,40 +61,55 @@ def _plano_de_pedacos(tamanho: int):
     return pedaco, tamanho // pedaco  # o último pedaço leva a sobra
 
 
-def publicar(arquivo, roteiro: dict) -> str:
-    token = _access_token()
-    cab = {"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=UTF-8"}
+def legenda(roteiro: dict) -> str:
+    hashtags = " ".join(roteiro.get("hashtags", []))
+    return f"{roteiro['titulo']}\n\n{roteiro.get('descricao', '')}\n\n{hashtags}".strip()[:2200]
+
+
+def _iniciar(cab, arquivo, roteiro, direto: bool):
     tamanho = os.path.getsize(arquivo)
     pedaco, qtd = _plano_de_pedacos(tamanho)
     origem = {"source": "FILE_UPLOAD", "video_size": tamanho, "chunk_size": pedaco, "total_chunk_count": qtd}
+    if not direto:
+        dados = _checar(requests.post(f"{API}/post/publish/inbox/video/init/", headers=cab,
+                                      json={"source_info": origem}, timeout=30))
+        return dados, tamanho, pedaco, qtd, None
 
-    legenda = f"{roteiro['titulo']}\n\n{roteiro.get('descricao', '')}\n\n{' '.join(roteiro.get('hashtags', []))}"
+    info = _checar(requests.post(f"{API}/post/publish/creator_info/query/", headers=cab, timeout=30))
+    opcoes = info.get("privacy_level_options", [])
+    privacidade = config.TIKTOK_PRIVACIDADE if config.TIKTOK_PRIVACIDADE in opcoes else (opcoes[0] if opcoes else "SELF_ONLY")
+    corpo = {
+        "post_info": {
+            "title": legenda(roteiro),
+            "privacy_level": privacidade,
+            "disable_duet": False,
+            "disable_stitch": False,
+            "disable_comment": False,
+            "video_cover_timestamp_ms": 1000,
+            "is_aigc": config.TIKTOK_ROTULO_IA,
+        },
+        "source_info": origem,
+    }
+    dados = _checar(requests.post(f"{API}/post/publish/video/init/", headers=cab, json=corpo, timeout=30))
+    return dados, tamanho, pedaco, qtd, privacidade
 
-    if config.TIKTOK_MODO == "direto":
-        info = _checar(requests.post(f"{API}/post/publish/creator_info/query/", headers=cab, timeout=30))
-        opcoes = info.get("privacy_level_options", [])
-        privacidade = config.TIKTOK_PRIVACIDADE if config.TIKTOK_PRIVACIDADE in opcoes else "SELF_ONLY"
-        corpo = {
-            "post_info": {
-                "title": legenda[:2200],
-                "privacy_level": privacidade,
-                "disable_duet": False,
-                "disable_stitch": False,
-                "disable_comment": False,
-                "video_cover_timestamp_ms": 1000,
-                "is_aigc": config.TIKTOK_ROTULO_IA,
-            },
-            "source_info": origem,
-        }
-        url_init = f"{API}/post/publish/video/init/"
-    else:
-        # Modo rascunho: vai para a caixa de entrada do app; legenda você cola lá.
-        corpo = {"source_info": origem}
-        url_init = f"{API}/post/publish/inbox/video/init/"
 
-    dados = _checar(requests.post(url_init, headers=cab, json=corpo, timeout=30))
+def publicar(arquivo, roteiro: dict) -> str:
+    cab = {"Authorization": f"Bearer {_access_token()}", "Content-Type": "application/json; charset=UTF-8"}
+
+    direto = config.TIKTOK_MODO == "direto"
+    try:
+        dados, tamanho, pedaco, qtd, privacidade = _iniciar(cab, arquivo, roteiro, direto)
+    except ErroTikTok as e:
+        if not direto or e.codigo not in (
+            "unaudited_client_can_only_post_to_private_accounts", "scope_not_authorized", "access_token_invalid_scope",
+        ):
+            raise
+        print(f"   ℹ️  Post direto ainda não liberado ({e.codigo}). Enviando para a caixa de entrada do app.")
+        direto = False
+        dados, tamanho, pedaco, qtd, privacidade = _iniciar(cab, arquivo, roteiro, False)
+
     publish_id, upload_url = dados["publish_id"], dados["upload_url"]
-
     with open(arquivo, "rb") as f:
         for i in range(qtd):
             inicio = i * pedaco
@@ -114,8 +130,7 @@ def publicar(arquivo, roteiro: dict) -> str:
                 raise RuntimeError(f"Upload no TikTok falhou: {r.status_code} {r.text[:300]}")
             print(f"   TikTok: pedaço {i + 1}/{qtd} enviado")
 
-    # acompanha o processamento
-    for _ in range(30):
+    for _ in range(30):  # acompanha o processamento
         time.sleep(10)
         st = _checar(requests.post(f"{API}/post/publish/status/fetch/", headers=cab,
                                    json={"publish_id": publish_id}, timeout=30))
@@ -125,6 +140,7 @@ def publicar(arquivo, roteiro: dict) -> str:
         if estado == "FAILED":
             raise RuntimeError(f"TikTok recusou o vídeo: {st.get('fail_reason')}")
 
-    if config.TIKTOK_MODO == "direto":
-        return f"publicado (id {publish_id}, privacidade {corpo['post_info']['privacy_level']})"
-    return "enviado para a caixa de entrada do app TikTok: abra o app e toque em Publicar"
+    if direto:
+        visibilidade = "público" if privacidade == "PUBLIC_TO_EVERYONE" else f"visibilidade {privacidade}"
+        return f"publicado direto com título e descrição ({visibilidade})"
+    return "na caixa de entrada do app TikTok: toque em Publicar e cole a legenda copiada do painel"

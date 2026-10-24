@@ -7,113 +7,176 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0d0f14;--card:#161a22;--borda:#252b37;--texto:#e9edf5;--fraco:#8b94a7;--amarelo:#ffe500;--verde:#2bd576;--vermelho:#ff5d5d}
+  :root{--bg:#0d0f14;--card:#161a22;--card2:#1c212b;--borda:#252b37;--texto:#e9edf5;--fraco:#8b94a7;--amarelo:#ffe500;--verde:#2bd576;--vermelho:#ff5d5d;--rosa:#ff2d6f}
   *{box-sizing:border-box;margin:0}
-  body{background:var(--bg);color:var(--texto);font-family:Poppins,system-ui,sans-serif;padding:32px 16px 64px}
-  main{max-width:860px;margin:0 auto}
-  header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
-  .logo{width:48px;height:48px;border-radius:14px;background:var(--amarelo);color:#111;display:grid;place-items:center;font-weight:800;font-size:22px}
+  body{background:var(--bg);color:var(--texto);font-family:Poppins,system-ui,sans-serif;padding:28px 16px 64px}
+  main{max-width:920px;margin:0 auto}
+  a{color:inherit}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+  .logo{width:48px;height:48px;border-radius:14px;background:var(--amarelo);color:#111;display:grid;place-items:center;font-weight:800;font-size:22px;flex:none}
   h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
   header p{color:var(--fraco);font-size:14px}
-  .acoes{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:24px}
-  .btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:16px;font-weight:600;text-decoration:none;font-size:16px;border:1px solid var(--borda);color:var(--texto);background:var(--card);transition:transform .15s}
-  .btn:hover{transform:translateY(-2px)}
-  .btn.principal{background:var(--amarelo);color:#111;border:none;font-size:18px}
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
-  .stat{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:16px}
-  .stat b{display:block;font-size:26px}
-  .stat span{color:var(--fraco);font-size:13px}
-  h2{font-size:18px;margin:8px 0 12px}
-  .video{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:16px;margin-bottom:10px}
-  .video h3{font-size:16px;font-weight:600;margin-bottom:4px}
-  .video .data{color:var(--fraco);font-size:13px;margin-bottom:10px}
-  .tags{display:flex;flex-wrap:wrap;gap:8px}
-  .tag{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--borda);color:var(--texto);text-decoration:none}
+  h2{font-size:18px;margin:28px 0 12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:12px;font-weight:600;text-decoration:none;font-size:14px;border:1px solid var(--borda);color:var(--texto);background:var(--card2);cursor:pointer;font-family:inherit;transition:transform .12s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.amarelo{background:var(--amarelo);color:#111;border:none}
+  .btn.rosa{background:var(--rosa);color:#fff;border:none}
+  .btn.grande{padding:18px;font-size:17px;border-radius:16px;width:100%}
+  .acoes{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  .redes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .rede{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .rede b{font-size:16px}
+  .rede small{color:var(--fraco);font-size:13px;line-height:1.5}
+  .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--borda);color:var(--fraco)}
+  .pill.ok{border-color:var(--verde);color:var(--verde)}
+  .aviso{display:none;background:#1c2a1f;border:1px solid var(--verde);border-radius:16px;padding:18px;margin-bottom:20px}
+  .aviso ol{margin:10px 0 0 18px;line-height:1.9}
+  .aviso code{background:var(--bg);padding:3px 8px;border-radius:6px;word-break:break-all;font-size:13px}
+  .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .video{background:var(--card);border:1px solid var(--borda);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+  .video video{width:100%;aspect-ratio:9/16;background:#000;display:block;object-fit:cover}
+  .video .sem{aspect-ratio:9/16;display:grid;place-items:center;color:var(--fraco);font-size:13px;background:var(--card2);text-align:center;padding:20px}
+  .video .corpo{padding:14px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .video h3{font-size:15px;font-weight:600;line-height:1.35}
+  .video .data{color:var(--fraco);font-size:12px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--borda);color:var(--fraco);text-decoration:none}
   .tag.ok{border-color:var(--verde);color:var(--verde)}
   .tag.erro{border-color:var(--vermelho);color:var(--vermelho)}
+  .botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
   .vazio{color:var(--fraco);text-align:center;padding:40px;border:1px dashed var(--borda);border-radius:16px}
   .links{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;font-size:13px}
   .links a{color:var(--fraco)}
-  #tiktok{display:none;background:#1c2a1f;border:1px solid var(--verde);border-radius:16px;padding:20px;margin-bottom:24px}
-  #tiktok code{display:block;word-break:break-all;background:#0d0f14;padding:12px;border-radius:10px;margin:12px 0;font-size:12px}
-  #tiktok button{background:var(--verde);border:none;color:#111;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:inherit}
-  @media(max-width:600px){.acoes{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--verde);color:#111;font-weight:600;padding:10px 18px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.on{opacity:1}
+  @media(max-width:640px){.acoes,.redes{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <main>
   <header>
     <div class="logo">▶</div>
-    <div><h1>AutoVídeo</h1><p>Vídeos curtos feitos por IA, publicados no YouTube e TikTok</p></div>
+    <div><h1>AutoVídeo</h1><p>Vídeos curtos feitos por IA · download e publicação automática</p></div>
   </header>
 
-  <section id="tiktok">
-    <h2>✅ TikTok autorizado</h2>
-    <p>Copie o endereço abaixo e cole no script <b>autorizar_tiktok.py</b> (ou mande pro Claude).</p>
-    <code id="tiktok-url"></code>
-    <button onclick="copiar()">Copiar endereço</button>
+  <!-- aparece quando o TikTok devolve o código de autorização -->
+  <section class="aviso" id="retorno">
+    <b>✅ TikTok autorizado! Falta 1 passo:</b>
+    <ol>
+      <li>Clique em <button class="btn" onclick="copiar(codigoTikTok)">📋 Copiar código</button></li>
+      <li>Clique em <a class="btn amarelo" id="concluir" target="_blank">Concluir conexão ↗</a> → <b>Run workflow</b> → cole o código → <b>Run workflow</b></li>
+    </ol>
+    <p style="color:var(--fraco);font-size:13px;margin-top:8px">O código vale poucos minutos: faça logo em seguida.</p>
   </section>
 
   <div class="acoes">
-    <a class="btn principal" id="gerar" target="_blank">🎬 Gerar vídeo agora</a>
-    <a class="btn" id="execucoes" target="_blank">📋 Ver execuções</a>
+    <a class="btn amarelo grande" id="gerar" target="_blank">🎬 Gerar vídeo agora</a>
+    <a class="btn grande" id="execucoes" target="_blank">📋 Ver execuções</a>
   </div>
 
-  <div class="stats">
-    <div class="stat"><b id="total">0</b><span>vídeos feitos</span></div>
-    <div class="stat"><b id="ultimo">—</b><span>último vídeo</span></div>
-    <div class="stat"><b>11h47</b><span>vídeo automático diário</span></div>
+  <h2>Redes conectadas</h2>
+  <div class="redes">
+    <div class="rede">
+      <div><b>TikTok</b> <span class="pill" id="tt-status">não conectado</span></div>
+      <small>Publica direto com o título, a descrição e as hashtags da IA. Enquanto o TikTok não aprovar seu app, o vídeo cai na caixa de entrada do app e você só toca em Publicar.</small>
+      <button class="btn rosa" id="tt-conectar" onclick="conectarTikTok()">Conectar TikTok</button>
+    </div>
+    <div class="rede">
+      <div><b>YouTube</b> <span class="pill" id="yt-status">não conectado</span></div>
+      <small>Publica como Short com título, descrição e hashtags. A conexão é feita uma vez, com o Claude te guiando.</small>
+    </div>
   </div>
 
-  <h2>Vídeos</h2>
-  <div id="lista"><div class="vazio">Carregando…</div></div>
+  <h2>Vídeos <span class="pill" id="total">0</span></h2>
+  <div id="lista" class="grade"><div class="vazio">Carregando…</div></div>
 
   <div class="links">
     <a id="chaves" target="_blank">🔑 Chaves (Secrets)</a>
     <a id="temas" target="_blank">📝 Fila de temas</a>
+    <a id="todos" target="_blank">📦 Todos os MP4</a>
     <a href="termos.html">Termos de uso</a>
     <a href="privacidade.html">Política de privacidade</a>
   </div>
 </main>
+<div class="toast" id="toast">Copiado!</div>
+
 <script>
-  // descobre usuário/repositório pelo endereço do GitHub Pages
   const usuario = location.hostname.split('.')[0];
   const repo = location.pathname.split('/').filter(Boolean)[0] || 'autovideo';
   const base = `https://github.com/${usuario}/${repo}`;
-  document.getElementById('gerar').href = `${base}/actions/workflows/diario.yml`;
-  document.getElementById('execucoes').href = `${base}/actions`;
-  document.getElementById('chaves').href = `${base}/settings/secrets/actions`;
-  document.getElementById('temas').href = `${base}/edit/main/temas.txt`;
+  const site = `${location.origin}/${repo}/`;
+  const $ = id => document.getElementById(id);
+  $('gerar').href = `${base}/actions/workflows/diario.yml`;
+  $('execucoes').href = `${base}/actions`;
+  $('chaves').href = `${base}/settings/secrets/actions`;
+  $('temas').href = `${base}/edit/main/temas.txt`;
+  $('todos').href = `${base}/releases`;
+  $('concluir').href = `${base}/actions/workflows/conectar_tiktok.yml`;
 
-  // retorno da autorização do TikTok
-  if (new URLSearchParams(location.search).get('code')) {
-    document.getElementById('tiktok').style.display = 'block';
-    document.getElementById('tiktok-url').textContent = location.href;
+  function toast(t){ const e=$('toast'); e.textContent=t||'Copiado!'; e.classList.add('on'); setTimeout(()=>e.classList.remove('on'),1600); }
+  async function copiar(texto){
+    try { await navigator.clipboard.writeText(texto); }
+    catch { const a=document.createElement('textarea'); a.value=texto; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); }
+    toast();
   }
-  function copiar(){ navigator.clipboard.writeText(location.href); }
+
+  // ── TikTok: retorno da autorização ──
+  const params = new URLSearchParams(location.search);
+  const codigoTikTok = params.get('code') || '';
+  if (codigoTikTok) $('retorno').style.display = 'block';
+  if (params.get('error')) alert('O TikTok não autorizou: ' + (params.get('error_description') || params.get('error')));
+
+  let cfg = {};
+  async function conectarTikTok(){
+    if (!cfg.tiktok_client_key) { alert('Primeiro cadastre o app no TikTok for Developers e passe o Client key pro Claude.'); return; }
+    const estado = Math.random().toString(36).slice(2);
+    const url = 'https://www.tiktok.com/v2/auth/authorize/?' + new URLSearchParams({
+      client_key: cfg.tiktok_client_key,
+      scope: 'user.info.basic,video.upload,video.publish',
+      response_type: 'code',
+      redirect_uri: site,
+      state: estado,
+    });
+    location.href = url;
+  }
 
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   function tag(nome, valor){
     if (!valor) return '';
     if (valor === 'ERRO') return `<span class="tag erro">${nome}: erro</span>`;
     if (valor.startsWith('http')) return `<a class="tag ok" href="${esc(valor)}" target="_blank">${nome} ↗</a>`;
-    return `<span class="tag ok" title="${esc(valor)}">${nome}: enviado</span>`;
+    const caixa = valor.includes('caixa de entrada');
+    return `<span class="tag ${caixa ? '' : 'ok'}" title="${esc(valor)}">${nome}: ${caixa ? 'na caixa de entrada' : 'publicado'}</span>`;
   }
-  fetch('videos.json?' + Date.now()).then(r => r.ok ? r.json() : []).catch(() => []).then(videos => {
+
+  const sem_cache = '?' + Date.now();
+  Promise.all([
+    fetch('config.json' + sem_cache).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+    fetch('videos.json' + sem_cache).then(r => r.ok ? r.json() : []).catch(() => []),
+  ]).then(([c, videos]) => {
+    cfg = c || {};
+    if (cfg.tiktok_conectado) { $('tt-status').textContent = 'conectado'; $('tt-status').classList.add('ok'); $('tt-conectar').textContent = 'Reconectar TikTok'; }
+    if (cfg.youtube_conectado) { $('yt-status').textContent = 'conectado'; $('yt-status').classList.add('ok'); }
+
     videos = (videos || []).slice().reverse();
-    document.getElementById('total').textContent = videos.length;
-    if (videos[0]) document.getElementById('ultimo').textContent = new Date(videos[0].data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-    const lista = document.getElementById('lista');
-    if (!videos.length) { lista.innerHTML = '<div class="vazio">Nenhum vídeo ainda. Clique em <b>Gerar vídeo agora</b> e depois em <b>Run workflow</b>.</div>'; return; }
-    lista.innerHTML = videos.map(v => `
-      <div class="video">
-        <h3>${esc(v.titulo)}</h3>
-        <div class="data">${new Date(v.data).toLocaleString('pt-BR')} · ${esc(v.assunto)}</div>
-        <div class="tags">
-          ${tag('YouTube', v.youtube)}${tag('TikTok', v.tiktok)}
-          ${v.download ? `<a class="tag" href="${esc(v.download)}" target="_blank">⬇ Baixar vídeo</a>` : ''}
+    $('total').textContent = videos.length;
+    window._videos = videos;
+    if (!videos.length) { $('lista').innerHTML = '<div class="vazio">Nenhum vídeo ainda. Clique em <b>Gerar vídeo agora</b> → <b>Run workflow</b>.</div>'; return; }
+    $('lista').innerHTML = videos.map((v, i) => `
+      <article class="video">
+        ${v.mp4
+          ? `<video src="${esc(v.mp4)}" controls preload="none" playsinline poster=""></video>`
+          : `<div class="sem">Vídeo feito antes do download direto.<br>${v.execucao || v.download ? `<a href="${esc(v.execucao || v.download)}" target="_blank">Baixar pela execução ↗</a>` : ''}</div>`}
+        <div class="corpo">
+          <h3>${esc(v.titulo)}</h3>
+          <div class="data">${new Date(v.data).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}${v.segundos ? ' · ' + v.segundos + 's' : ''}</div>
+          <div class="tags">${tag('YouTube', v.youtube)}${tag('TikTok', v.tiktok)}</div>
+          <div class="botoes">
+            ${v.mp4 ? `<a class="btn amarelo" href="${esc(v.mp4)}" download>⬇ Baixar</a>` : '<span></span>'}
+            <button class="btn" onclick="copiar(window._videos[${i}].legenda || window._videos[${i}].titulo)">📋 Legenda</button>
+          </div>
         </div>
-      </div>`).join('');
+      </article>`).join('');
   });
 </script>
 </body>
