@@ -100,42 +100,81 @@ def _modelos_groq() -> list[str]:
     return sorted(bons, key=lambda i: next((n for n, p in enumerate(preferidos) if p in i), 99))
 
 
+def _json_do_texto(texto: str) -> dict:
+    """Extrai o JSON da resposta mesmo se vier com texto ou ``` em volta."""
+    texto = texto.strip()
+    if texto.startswith("```"):
+        texto = texto.strip("`").split("\n", 1)[-1]
+    try:
+        return json.loads(texto)
+    except json.JSONDecodeError:
+        ini, fim = texto.find("{"), texto.rfind("}")
+        if ini >= 0 and fim > ini:
+            return json.loads(texto[ini:fim + 1])
+        raise
+
+
 def _pedir_ao_groq(prompt: str) -> dict:
     """Groq: plano gratuito em https://console.groq.com/keys (chave começa com gsk_)."""
     candidatos = [config.GROQ_MODELO] if config.GROQ_MODELO else []
     lista_carregada = False
     esperas = 0
+    tentativa = 0  # 0-1: modo JSON · 2: texto livre (para respostas longas que o modo JSON recusa)
+    ultimo_erro = ""
     while True:
         if not candidatos:
             if lista_carregada:
-                raise RuntimeError("Nenhum modelo do Groq aceitou o pedido.")
+                raise RuntimeError(f"Nenhum modelo do Groq aceitou o pedido. Último erro: {ultimo_erro}")
             candidatos, lista_carregada = _modelos_groq()[:5], True
+            tentativa = 0
         modelo = candidatos[0]
-        r = requests.post(
-            f"{GROQ_URL}/chat/completions",
-            headers={"Authorization": f"Bearer {config.GROQ_API_KEY}"},
-            json={
-                "model": modelo,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 1.0,
-                "response_format": {"type": "json_object"},
-            },
-            timeout=120,
-        )
-        if r.status_code == 429 and esperas < 4:  # limite do plano grátis
+        corpo = {
+            "model": modelo,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.9,
+            "max_completion_tokens": 16000,
+        }
+        if tentativa < 2:
+            corpo["response_format"] = {"type": "json_object"}
+        r = requests.post(f"{GROQ_URL}/chat/completions",
+                          headers={"Authorization": f"Bearer {config.GROQ_API_KEY}"}, json=corpo, timeout=180)
+        if r.status_code == 429 and esperas < 6:  # limite do plano grátis
             esperas += 1
             time.sleep(20)
             continue
-        if r.status_code in (400, 404) and "model" in r.text.lower():
-            # modelo aposentado ou sem suporte a JSON: tenta o próximo
-            print(f"   modelo {modelo} indisponível, tentando outro...")
-            candidatos = candidatos[1:]
-            continue
         if r.status_code in (401, 403):
             raise RuntimeError("Groq recusou a chave. Confira o segredo GROQ_API_KEY (começa com 'gsk_').")
-        r.raise_for_status()
+        if r.status_code >= 400:
+            ultimo_erro = f"{r.status_code} {r.text[:300]}"
+            print(f"   ⚠️ Groq ({modelo}) respondeu {ultimo_erro}")
+            if r.status_code == 400 and "max_completion_tokens" in r.text and corpo.get("max_completion_tokens", 0) > 8000:
+                # modelo com limite menor de resposta: tenta de novo pedindo menos
+                corpo_menor = 8000
+                r2 = requests.post(f"{GROQ_URL}/chat/completions",
+                                   headers={"Authorization": f"Bearer {config.GROQ_API_KEY}"},
+                                   json={**corpo, "max_completion_tokens": corpo_menor}, timeout=180)
+                if r2.ok:
+                    r = r2
+            if r.status_code >= 400:
+                if r.status_code in (400, 404) and "model" in r.text.lower() and "json" not in r.text.lower():
+                    candidatos = candidatos[1:]  # modelo aposentado: tenta o próximo
+                elif tentativa < 2:
+                    tentativa += 1          # JSON inválido/longo demais: tenta de novo, depois em texto livre
+                else:
+                    candidatos, tentativa = candidatos[1:], 0
+                continue
+        try:
+            dados = _json_do_texto(r.json()["choices"][0]["message"]["content"] or "")
+        except Exception as erro:
+            ultimo_erro = f"resposta sem JSON válido ({erro})"
+            print(f"   ⚠️ {ultimo_erro}, tentando de novo...")
+            if tentativa < 2:
+                tentativa += 1
+            else:
+                candidatos, tentativa = candidatos[1:], 0
+            continue
         print(f"   (roteiro escrito pelo modelo {modelo} no Groq)")
-        return json.loads(r.json()["choices"][0]["message"]["content"])
+        return dados
 
 
 def gerar(tema: str | None, usados: list[str]) -> dict:

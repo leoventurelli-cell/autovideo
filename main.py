@@ -165,6 +165,19 @@ def main():
     args = ap.parse_args()
     longo = args.formato == "longo"
 
+    # horário automático: se já saiu um vídeo desse formato hoje (ex.: o agendamento do GitHub
+    # atrasou e alguém já gerou na mão), não repete
+    if os.getenv("GITHUB_EVENT_NAME") == "schedule":
+        try:
+            hoje = datetime.now().astimezone().date().isoformat()
+            lista = json.loads((config.PASTA / "docs" / "videos.json").read_text(encoding="utf-8"))
+            if any(v.get("formato") == args.formato and not v.get("chamada_de")
+                   and str(v.get("data", "")).startswith(hoje) for v in lista):
+                print(f"⏭️  Já tem vídeo {args.formato} de hoje no painel; o horário automático não vai repetir.")
+                return
+        except Exception:
+            pass
+
     historico = _historico()
     tema = args.tema or (None if longo else _proximo_tema_da_lista())
 
