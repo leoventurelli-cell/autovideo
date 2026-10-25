@@ -20,6 +20,7 @@ Regras do roteiro:
 - A primeira frase é um gancho forte que prende nos 2 primeiros segundos.
 - Frases curtas e diretas, linguagem falada, sem emojis, sem hashtags, sem "olá pessoal".
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
+- Mistérios: só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
 - Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
 - Termine com uma frase curta que convide a seguir o canal ou comentar.
 - Não escreva indicações de cena, só o texto que será narrado.
@@ -232,6 +233,7 @@ Estrutura obrigatória:
 
 Regras: linguagem falada, frases curtas, sem emojis, sem indicações de cena, só fatos verdadeiros e verificáveis.
 Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números.
+Mistérios: só casos reais e documentados; separe o que é fato comprovado do que é teoria ou lenda.
 
 Responda SOMENTE com um JSON neste formato:
 {{
