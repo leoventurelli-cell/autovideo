@@ -1,0 +1,61 @@
+name: Nova capa
+
+# Cria a thumbnail com IA de um vídeo do painel e coloca no YouTube.
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: "ID do vídeo (aparece no painel)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: painel
+  cancel-in-progress: false
+
+jobs:
+  capa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependências
+        run: |
+          pip install -r requirements.txt
+          (command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)) >/dev/null
+          mkdir -p fontes
+          [ -f fontes/Poppins-Bold.ttf ] || curl -sSL -o fontes/Poppins-Bold.ttf https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf
+      - name: Criar e enviar a capa
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YT_CLIENT_ID: ${{ vars.YT_CLIENT_ID || secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          NICHO: ${{ vars.NICHO }}
+          ID: ${{ github.event.inputs.id }}
+        run: python capa.py --id "$ID"
+      - name: Mostrar a capa no painel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json, subprocess, pathlib, os
+          id_, capa = pathlib.Path("saida/capa.txt").read_text().split("\n")
+          tag = id_.removesuffix("-short")
+          subprocess.run(["gh", "release", "upload", tag, capa, "--clobber"], check=True)
+          url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/{pathlib.Path(capa).name}"
+          p = pathlib.Path("docs/videos.json"); v = json.loads(p.read_text())
+          for x in v:
+              if x.get("id") == id_ or f"/download/{id_}/" in x.get("mp4", ""):
+                  x["capa"] = url
+          p.write_text(json.dumps(v, ensure_ascii=False, indent=1))
+          PY
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          git add docs/videos.json
+          git diff --cached --quiet || (git commit -m "nova capa" && git pull --rebase && git push)
