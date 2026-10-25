@@ -275,11 +275,20 @@ def main():
                 resultados[nome] = publicar_youtube.publicar(destino, r, args.formato, capitulos, capa)
             else:
                 import publicar_tiktok
-                resultados[nome] = publicar_tiktok.publicar(destino, r)
+                try:
+                    resultados[nome] = publicar_tiktok.publicar(destino, r)
+                except Exception:
+                    print("   TikTok não respondeu, tentando de novo em 30 s...")
+                    import time
+                    time.sleep(30)
+                    resultados[nome] = publicar_tiktok.publicar(destino, r)
         except Exception:
-            falhou = True
             resultados[nome] = "ERRO"
             traceback.print_exc()
+            if nome == "youtube":
+                falhou = True
+            else:  # TikTok é opcional: o vídeo continua no painel para postar à mão
+                print(f"::warning title={nome}::Não consegui mandar para o {nome}; use Baixar + Copiar no painel.")
 
     # Short de chamada → YouTube, com o link do vídeo longo na descrição
     resultados_chamada = {}
