@@ -7,6 +7,7 @@ Dois formatos:
 import json
 import random
 import subprocess
+import time
 from pathlib import Path
 
 import requests
@@ -290,15 +291,20 @@ def _imagem_ia(prompt: str, destino: Path) -> bool:
               "sharp focus, mysterious atmosphere, no text, no letters, no watermark")
     url = (f"https://image.pollinations.ai/prompt/{quote(prompt + ', ' + estilo)}"
            f"?width=1280&height=720&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
-    for tentativa in range(3):
+    cab = {"User-Agent": "Mozilla/5.0 (AutoVideo; +https://github.com)", "Accept": "image/*"}
+    for tentativa in range(4):
         try:
-            r = requests.get(url, timeout=120)
-            if r.ok and r.headers.get("content-type", "").startswith("image"):
+            r = requests.get(url + ("&referrer=autovideo" if tentativa % 2 else ""), headers=cab, timeout=150)
+            tipo = r.headers.get("content-type", "")
+            if r.ok and tipo.startswith("image"):
                 destino.write_bytes(r.content)
                 Image.open(destino).verify()
                 return True
+            print(f"   capa IA: tentativa {tentativa + 1} → {r.status_code} {tipo} {r.text[:150]!r}")
         except Exception as erro:
             print(f"   capa IA: tentativa {tentativa + 1} falhou ({erro})")
+        time.sleep(8)
+    print("::warning title=Capa::A IA de imagem não respondeu; usei uma cena do vídeo.")
     return False
 
 
@@ -317,8 +323,9 @@ def criar_capa(video_mp4: Path, titulo: str, destino: Path, prompt_ia: str | Non
         img = ImageEnhance.Contrast(img).enhance(1.12)
         print("   🖼️  capa criada com imagem de IA")
     else:
+        # cena do vídeo sem a faixa de legenda (corta a parte de baixo, onde ela fica)
         _ffmpeg("-ss", f"{duracao(video_mp4) * 0.3:.1f}", "-i", video_mp4, "-frames:v", "1",
-                "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", fundo)
+                "-vf", "crop=iw:ih*0.74:0:0,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", fundo)
         img = Image.open(fundo).convert("RGB")
 
     # escurece o lado esquerdo (onde vai o texto) com um degradê
