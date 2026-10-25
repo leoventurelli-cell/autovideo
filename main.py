@@ -132,6 +132,8 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
             "titulo": r["titulo"], "assunto": r.get("assunto", ""),
             "legenda": _legenda(r), "segundos": round(segundos), "formato": formato,
             "textos": textos or _textos_para_colar(r, formato, capitulos), **(extra or {}), **resultados}
+    if r.get("tendencia"):
+        item["tendencia"] = r["tendencia"]
     if r.get("_tag") and "id" not in item:
         item["id"] = r["_tag"]
     if mp4:
@@ -180,10 +182,23 @@ def main():
 
     historico = _historico()
     tema = args.tema or (None if longo else _proximo_tema_da_lista())
+    tendencia = None
+    if not tema:  # automático: parte do que está em alta hoje no Brasil
+        print("📈 Olhando o que está em alta hoje (Google Trends + YouTube)...")
+        try:
+            import tendencias
+            escolha = tendencias.escolher_tema(args.formato, historico, evitar=historico[-1] if historico else "")
+            if escolha:
+                tema = tendencias.tema_com_contexto(escolha)
+                tendencia = escolha.get("tendencia")
+        except Exception:
+            traceback.print_exc()
 
     print(f"🧠 Escrevendo o roteiro ({args.formato})...")
     r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
     r = gerador_roteiro.textos_virais(r, args.formato)
+    if tendencia:
+        r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")
 
     pasta = config.PASTA_SAIDA / f"{datetime.now():%Y-%m-%d_%H%M}_{_slug(r['assunto'])}"
