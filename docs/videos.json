@@ -122,7 +122,7 @@
   "youtube": "https://youtu.be/LbRQaYl5K4Q",
   "id": "video-20261025-1044-14",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261025-1044-14/ilhas-de-lixo-do-pacifico-o-segredo-que.mp4",
-  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261025-1044-14/ilhas-de-lixo-do-pacifico-o-segredo-que-capa.jpg",
+  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261025-1044-14/video-20261025-1044-14-capa.jpg",
   "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40197973989"
  },
  {
@@ -143,6 +143,7 @@
   "id": "video-20261025-1044-14-short",
   "youtube": "https://youtube.com/shorts/FQEgmJNPGrU",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261025-1044-14/ilhas-de-lixo-do-pacifico-o-segredo-que-short.mp4",
-  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40197973989"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40197973989",
+  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261025-1044-14/video-20261025-1044-14-capa.jpg"
  }
 ]
