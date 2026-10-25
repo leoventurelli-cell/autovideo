@@ -318,6 +318,8 @@ Responda SOMENTE com um JSON:
   "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
   "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
   "hashtags_youtube": ["3 a 5 hashtags relevantes"],
+  "texto_capa": "frase da thumbnail: 2 a 4 palavras de impacto em português, que despertem curiosidade (ex: 'NINGUÉM EXPLICA ISSO')",
+  "prompt_capa": "descrição EM INGLÊS de UMA cena cinematográfica e chamativa para a thumbnail deste vídeo (o objeto/lugar principal do tema, em close, iluminação dramática), sem texto",
   "titulo_short": "título de um Short de 1 minuto que divulga este vídeo (até 55 caracteres, provoca curiosidade, palavra-chave no início)",
   "tags_youtube": ["10 a 15 palavras-chave de busca em português, do específico ao amplo"]
 }}"""
@@ -354,6 +356,8 @@ def textos_virais(dados: dict, formato: str = "curto") -> dict:
     dados["hashtags_tiktok"] = lista("hashtags_tiktok", 7) or dados.get("hashtags", [])
     dados["hashtags"] = lista("hashtags_youtube", 5) or dados.get("hashtags", [])
     dados["tags_youtube"] = lista("tags_youtube", 15)
+    dados["texto_capa"] = str(v.get("texto_capa") or "").strip()[:40]
+    dados["prompt_capa"] = str(v.get("prompt_capa") or "").strip()[:400]
     dados["titulo_short"] = str(v.get("titulo_short") or dados.get("titulo", "")).strip()[:90]
     print(f"   ✨ título viral: {dados['titulo']}")
     return dados

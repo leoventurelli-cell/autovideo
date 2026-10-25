@@ -206,7 +206,9 @@ def main():
 
     capa, capitulos, chamada = None, None, None
     if longo:
-        capa = video.criar_capa(destino, r["titulo"], pasta / f"{_slug(r['titulo'])}-capa.jpg")
+        capa = video.criar_capa(destino, r.get("texto_capa") or r["titulo"],
+                                pasta / f"{_slug(r['titulo'])}-capa.jpg",
+                                prompt_ia=r.get("prompt_capa") or r.get("assunto"))
         capitulos = [(t, p["titulo"]) for t, p in zip(inicios, r["partes"])]
         try:
             print("✂️  Criando o Short de chamada para o vídeo longo...")

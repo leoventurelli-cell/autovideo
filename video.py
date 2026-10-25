@@ -282,44 +282,82 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
 
 
 # ───────────────────────── thumbnail (capa) ─────────────────────────
-def criar_capa(video_mp4: Path, titulo: str, destino: Path) -> Path:
-    """Capa 1280x720 para o YouTube: um quadro do vídeo + título grande."""
+def _imagem_ia(prompt: str, destino: Path) -> bool:
+    """Gera uma imagem do tema com IA grátis (Pollinations, sem chave). False se falhar."""
+    from urllib.parse import quote
+    from PIL import Image
+    estilo = ("cinematic YouTube thumbnail background, dramatic lighting, high contrast, vivid colors, "
+              "sharp focus, mysterious atmosphere, no text, no letters, no watermark")
+    url = (f"https://image.pollinations.ai/prompt/{quote(prompt + ', ' + estilo)}"
+           f"?width=1280&height=720&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
+    for tentativa in range(3):
+        try:
+            r = requests.get(url, timeout=120)
+            if r.ok and r.headers.get("content-type", "").startswith("image"):
+                destino.write_bytes(r.content)
+                Image.open(destino).verify()
+                return True
+        except Exception as erro:
+            print(f"   capa IA: tentativa {tentativa + 1} falhou ({erro})")
+    return False
+
+
+def criar_capa(video_mp4: Path, titulo: str, destino: Path, prompt_ia: str | None = None) -> Path:
+    """Capa 1280x720 para o YouTube: imagem do tema feita por IA (ou um quadro do vídeo)
+    + frase curta e grande, no estilo das capas que mais recebem cliques."""
     from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
-    quadro = destino.with_suffix(".quadro.jpg")
-    _ffmpeg("-ss", f"{duracao(video_mp4) * 0.3:.1f}", "-i", video_mp4, "-frames:v", "1",
-            "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", quadro)
-    img = ImageEnhance.Brightness(Image.open(quadro).convert("RGB")).enhance(0.55)
+    fundo = destino.with_suffix(".fundo.jpg")
+    usou_ia = bool(prompt_ia) and _imagem_ia(prompt_ia, fundo)
+    if usou_ia:
+        img = Image.open(fundo).convert("RGB")
+        w, h = img.size  # amplia ~7% e corta: some a marca d'água do canto
+        img = img.resize((int(w * 1.07), int(h * 1.07)), Image.LANCZOS)
+        img = img.crop((0, 0, w, h)).resize((1280, 720), Image.LANCZOS)
+        img = ImageEnhance.Contrast(img).enhance(1.12)
+        print("   🖼️  capa criada com imagem de IA")
+    else:
+        _ffmpeg("-ss", f"{duracao(video_mp4) * 0.3:.1f}", "-i", video_mp4, "-frames:v", "1",
+                "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", fundo)
+        img = Image.open(fundo).convert("RGB")
+
+    # escurece o lado esquerdo (onde vai o texto) com um degradê
+    sombra = Image.new("L", (1280, 720))
+    ds = ImageDraw.Draw(sombra)
+    for x in range(1280):
+        ds.line([(x, 0), (x, 720)], fill=int(215 * max(0.0, 1 - x / 900) ** 1.3))
+    img = Image.composite(Image.new("RGB", (1280, 720), (0, 0, 0)), img, sombra)
     d = ImageDraw.Draw(img)
-    fonte_arq = config.PASTA_FONTES / "Poppins-Bold.ttf"
+    fonte_arq = str(config.PASTA_FONTES / "Poppins-Bold.ttf")
 
     palavras = titulo.upper().split()
-    tamanho = 110
-    while True:  # quebra o título em até 3 linhas que caibam na largura
-        fonte = ImageFont.truetype(str(fonte_arq), tamanho)
+    tamanho = 150
+    while True:  # até 3 linhas na metade esquerda
+        fonte = ImageFont.truetype(fonte_arq, tamanho)
         linhas, atual = [], ""
         for p in palavras:
             teste = f"{atual} {p}".strip()
-            if d.textlength(teste, font=fonte) <= 1160:
+            if d.textlength(teste, font=fonte) <= 760:
                 atual = teste
             else:
-                linhas.append(atual)
+                if atual:
+                    linhas.append(atual)
                 atual = p
         linhas.append(atual)
-        if len(linhas) <= 3 or tamanho <= 60:
+        if (len(linhas) <= 3 and max(d.textlength(l, font=fonte) for l in linhas) <= 800) or tamanho <= 64:
             break
         tamanho -= 8
 
-    altura_linha = int(tamanho * 1.12)
+    altura_linha = int(tamanho * 1.08)
     y = (720 - altura_linha * len(linhas)) // 2
     for n, linha in enumerate(linhas):
-        cor = "#FFE500" if n == 0 else "#FFFFFF"
-        largura = d.textlength(linha, font=fonte)
-        d.text(((1280 - largura) / 2, y), linha, font=fonte, fill=cor,
-               stroke_width=max(4, tamanho // 14), stroke_fill="#000000")
+        cor = "#FFE500" if n == len(linhas) - 1 else "#FFFFFF"  # última linha em amarelo
+        d.text((56, y), linha, font=fonte, fill=cor, stroke_width=max(5, tamanho // 12), stroke_fill="#000000")
         y += altura_linha
-    img.save(destino, "JPEG", quality=90)
-    quadro.unlink(missing_ok=True)
+    # faixa vermelha fina embaixo do texto
+    d.rectangle((60, y + 22, 60 + 220, y + 36), fill="#FF1E1E")
+    img.save(destino, "JPEG", quality=92)
+    fundo.unlink(missing_ok=True)
     return destino
 
 
