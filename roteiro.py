@@ -34,7 +34,7 @@ Responda SOMENTE com um JSON neste formato:
   "roteiro": "texto completo da narração",
   "descricao": "descrição de 2 ou 3 frases para o post",
   "hashtags": ["#exemplo", "#outra", "#shorts"],
-  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'). Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Evite pessoas em escritório, reuniões, finanças e casa"]
+  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'). Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Se o vídeo é sobre ETs, OVNIs, naves ou criaturas, pelo menos METADE das cenas deve ser 'ia:' mostrando o ser/a nave descritos no roteiro, e a cidade/lugar real do caso deve aparecer como 'wiki:' (ex: 'wiki:Varginha'). Evite pessoas em escritório, reuniões, finanças e casa"]
 }}"""
 
 EXEMPLO = {
@@ -243,7 +243,7 @@ Responda SOMENTE com um JSON neste formato:
   "descricao": "descrição de 3 a 5 frases para o YouTube, com palavras-chave",
   "hashtags": ["#curiosidades", "#outra", "#outra"],
   "partes": [
-    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 cenas desta parte: termo de busca EM INGLÊS com o objeto/lugar LITERAL (ex: 'deep ocean'); 'wiki:Nome do artigo' para pessoa/lugar/objeto real famoso (ex: 'wiki:Pelé'); 'ia:descrição em inglês' para coisas imaginadas (ET, nave, criatura). Evite escritório, reuniões e finanças"]}}
+    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 cenas desta parte: termo de busca EM INGLÊS com o objeto/lugar LITERAL (ex: 'deep ocean'); 'wiki:Nome do artigo' para pessoa/lugar/objeto real famoso (ex: 'wiki:Pelé'); 'ia:descrição em inglês' para coisas imaginadas (ET, nave, criatura) — em vídeos de ETs/OVNIs, pelo menos metade das cenas 'ia:'. Evite escritório, reuniões e finanças"]}}
   ]
 }}"""
 

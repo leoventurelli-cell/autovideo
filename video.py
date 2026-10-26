@@ -75,7 +75,9 @@ def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) 
         return None
     # escolhe pelo que o vídeo REALMENTE mostra (a descrição vem no endereço do Pexels),
     # e evita cenas genéricas de escritório/negócios que não combinam com o assunto
-    palavras_termo = {w for w in termo.lower().replace("-", " ").split() if len(w) > 2}
+    vazias = {"photo", "video", "image", "footage", "view", "scene", "shot", "close", "the", "and", "with",
+              "blurred", "dark", "bright", "old", "night", "cinematic", "people", "man", "woman"}
+    palavras_termo = {w for w in termo.lower().replace("-", " ").split() if len(w) > 2} - vazias
     genericas = {"office", "business", "meeting", "handshake", "laptop", "stock", "trading", "kitchen",
                  "corporate", "businessman", "businesswoman", "coworkers", "presentation", "typing"}
 
@@ -88,7 +90,10 @@ def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) 
 
     ordenados = sorted(enumerate(videos), key=lambda iv: (-nota(iv[1]), iv[0]))
     melhores = [v for _, v in ordenados[:2]]
-    if exigir_relevancia and nota(melhores[0]) <= 0 and len(palavras_termo) >= 2:
+    # o vídeo precisa mostrar pelo menos metade das palavras importantes da cena (ex.: 'military truck'
+    # precisa de 'military' E 'truck'; 'radio telescope' precisa de 'telescope' e 'radio')
+    minimo = 3 * max(1, -(-len(palavras_termo) // 2))
+    if exigir_relevancia and palavras_termo and nota(melhores[0]) < minimo:
         return None  # nenhum vídeo mostra de fato o que a cena pede
     escolhido = random.choice(melhores) if nota(melhores[0]) == nota(melhores[-1]) else melhores[0]
     ja_usados.add(escolhido["id"])
@@ -101,6 +106,8 @@ def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) 
     return melhor["link"]
 
 
+IMAGINARIOS = (" alien", "ufo", "spaceship", "space ship", "spacecraft", "flying saucer", "extraterrestrial",
+               "creature", "monster", "ghost", "humanoid", " et ", "mothership", "abduction", "cryptid")
 CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
 UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
@@ -153,6 +160,8 @@ def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
     for i, termo in enumerate(unicos):
         tipo, _, valor = termo.partition(":") if termo.split(":", 1)[0] in ("wiki", "ia") else ("", "", termo)
         valor = valor.strip()
+        if not tipo and any(p in f" {termo.lower()} " for p in IMAGINARIOS):
+            tipo = "ia"  # banco de vídeo não tem ET/nave de verdade: desenha a cena
         if tipo == "wiki":
             foto = pasta / f"clipe_{i}.jpg"
             if _foto_wikimedia(valor, foto):
@@ -406,9 +415,10 @@ def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
     url = (f"https://image.pollinations.ai/prompt/{quote(prompt + ', ' + estilo)}"
            f"?width={larg}&height={alt}&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
     cab = {"User-Agent": "Mozilla/5.0 (AutoVideo; +https://github.com)", "Accept": "image/*"}
-    for tentativa in range(2 if rapido else 4):
+    for tentativa in range(3 if rapido else 4):
         try:
-            r = requests.get(url + ("&referrer=autovideo" if tentativa % 2 else ""), headers=cab, timeout=150)
+            r = requests.get(url + ("&referrer=autovideo" if tentativa % 2 else ""), headers=cab,
+                             timeout=100 if rapido else 150)
             tipo = r.headers.get("content-type", "")
             if r.ok and tipo.startswith("image"):
                 destino.write_bytes(r.content)
