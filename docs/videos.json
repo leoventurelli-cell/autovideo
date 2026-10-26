@@ -245,7 +245,7 @@
   "youtube": "https://youtu.be/KPmwMkxqs8U",
   "id": "video-20261026-1233-22",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261026-1233-22/lula-reeleito-os-8-segredos-que-o-brasil.mp4",
-  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261026-1233-22/lula-reeleito-os-8-segredos-que-o-brasil-capa.jpg",
+  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261026-1233-22/video-20261026-1233-22-capa.jpg",
   "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40348278765"
  },
  {
@@ -266,6 +266,7 @@
   "id": "video-20261026-1233-22-short",
   "youtube": "https://youtube.com/shorts/9AjkhIgU-Ss",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261026-1233-22/lula-reeleito-os-8-segredos-que-o-brasil-short.mp4",
-  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40348278765"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40348278765",
+  "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261026-1233-22/video-20261026-1233-22-capa.jpg"
  }
 ]
