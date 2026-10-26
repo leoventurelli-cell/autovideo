@@ -132,6 +132,7 @@ jobs:
           TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
           # Configurações sem segredo ficam em Settings → Variables
           NICHO: ${{ vars.NICHO }}
+          CANAL: ${{ vars.CANAL }}
           VOZ: ${{ vars.VOZ }}
           YT_PRIVACIDADE: ${{ vars.YT_PRIVACIDADE }}
           TIKTOK_MODO: ${{ vars.TIKTOK_MODO }}
