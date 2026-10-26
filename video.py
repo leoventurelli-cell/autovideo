@@ -200,6 +200,12 @@ def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
         except Exception as erro:
             print(f"   ⚠️  '{termo}' sem clipe: {erro}")
             clipes[termo] = None
+    # cena de IA que falhou: repete uma imagem de IA que deu certo (ET/nave) em vez de fundo vazio
+    feitas = [c for c in clipes.values() if c and c.suffix == ".jpg" and c.name.startswith("clipe_")]
+    for termo in unicos:
+        if clipes.get(termo) is None and feitas:
+            clipes[termo] = random.choice(feitas)
+            print(f"   ↺ '{termo}' reaproveita {clipes[termo].name}")
     return clipes
 
 
@@ -424,9 +430,11 @@ def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
                 destino.write_bytes(r.content)
                 Image.open(destino).verify()
                 return True
-            print(f"   capa IA: tentativa {tentativa + 1} → {r.status_code} {tipo} {r.text[:150]!r}")
+            print(f"   imagem IA: tentativa {tentativa + 1} → {r.status_code} (servidor ocupado)")
+            if r.status_code in (402, 429):
+                time.sleep(25)  # limite de pedidos do serviço grátis: espera a fila andar
         except Exception as erro:
-            print(f"   capa IA: tentativa {tentativa + 1} falhou ({erro})")
+            print(f"   imagem IA: tentativa {tentativa + 1} falhou ({erro})")
         time.sleep(8)
     if not rapido:
         print("::warning title=Capa::A IA de imagem não respondeu; usei uma cena do vídeo.")
