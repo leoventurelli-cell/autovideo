@@ -214,6 +214,9 @@ def main():
         palavras = voz.gerar(r["roteiro"], audio)
 
     final = video.montar(r, audio, palavras, pasta, formato=args.formato, inicios_partes=inicios)
+    if video.CREDITOS:  # licença das fotos da Wikimedia pede crédito
+        creditos = "\n".join(f"• {c}" for c in dict.fromkeys(video.CREDITOS))
+        r["descricao"] = f"{r.get('descricao', '').strip()}\n\n📷 Fotos (Wikimedia Commons):\n{creditos}"
     destino = pasta / f"{_slug(r['titulo'])}.mp4"
     final.rename(destino)
     segundos = video.duracao(destino)

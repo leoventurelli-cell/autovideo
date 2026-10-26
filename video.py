@@ -62,7 +62,7 @@ def duracao(arquivo: Path) -> float:
 
 
 # ───────────────────────── clipes do Pexels ─────────────────────────
-def _buscar_pexels(termo: str, ja_usados: set) -> str | None:
+def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) -> str | None:
     r = requests.get(
         "https://api.pexels.com/videos/search",
         headers={"Authorization": config.PEXELS_API_KEY},
@@ -88,6 +88,8 @@ def _buscar_pexels(termo: str, ja_usados: set) -> str | None:
 
     ordenados = sorted(enumerate(videos), key=lambda iv: (-nota(iv[1]), iv[0]))
     melhores = [v for _, v in ordenados[:2]]
+    if exigir_relevancia and nota(melhores[0]) <= 0 and len(palavras_termo) >= 2:
+        return None  # nenhum vídeo mostra de fato o que a cena pede
     escolhido = random.choice(melhores) if nota(melhores[0]) == nota(melhores[-1]) else melhores[0]
     ja_usados.add(escolhido["id"])
     deitado = P["orientacao"] == "landscape"
@@ -99,18 +101,84 @@ def _buscar_pexels(termo: str, ja_usados: set) -> str | None:
     return melhor["link"]
 
 
-def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
-    """Baixa um clipe por termo (sem repetir termos). Termo sem clipe vira None (fundo animado)."""
-    unicos = list(dict.fromkeys(cenas))
-    if not config.PEXELS_API_KEY:
-        print("⚠️  Sem PEXELS_API_KEY: usando fundos animados no lugar dos clipes.")
-        return {t: None for t in unicos}
+CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
+UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
+
+def _foto_wikimedia(nome: str, destino: Path) -> bool:
+    """Foto real (pessoa, lugar, objeto) da Wikipédia, só se o arquivo estiver no Wikimedia Commons
+    (licença livre). Guarda autor e licença em CREDITOS."""
+    import html
+    import re as _re
+    for lingua in ("pt", "en"):
+        try:
+            r = requests.get(f"https://{lingua}.wikipedia.org/w/api.php", headers=UA, timeout=30, params={
+                "action": "query", "titles": nome, "prop": "pageimages", "piprop": "original|name",
+                "redirects": 1, "format": "json"}).json()
+            pagina = next(iter(r.get("query", {}).get("pages", {}).values()), {})
+            arquivo = pagina.get("pageimage")
+            if not arquivo:
+                continue
+            info = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
+                "action": "query", "titles": f"File:{arquivo}", "prop": "imageinfo",
+                "iiprop": "url|extmetadata", "iiurlwidth": 1920, "format": "json"}).json()
+            pag = next(iter(info.get("query", {}).get("pages", {}).values()), {})
+            ii = (pag.get("imageinfo") or [None])[0]
+            if not ii or "/wikipedia/commons/" not in ii.get("url", ""):
+                continue  # imagem só da Wikipédia (uso restrito): não usa
+            meta = ii.get("extmetadata", {})
+            autor = _re.sub("<[^>]+>", "", html.unescape(meta.get("Artist", {}).get("value", ""))).strip()
+            licenca = meta.get("LicenseShortName", {}).get("value", "")
+            url = ii.get("thumburl") or ii["url"]
+            img = requests.get(url, headers=UA, timeout=60)
+            img.raise_for_status()
+            destino.write_bytes(img.content)
+            from PIL import Image
+            Image.open(destino).verify()
+            CREDITOS.append(f"{nome}: {autor or 'Wikimedia Commons'} ({licenca}, Wikimedia Commons)")
+            return True
+        except Exception as erro:
+            print(f"   foto de '{nome}' indisponível ({erro})")
+    return False
+
+
+def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
+    """Uma mídia por termo (sem repetir termos):
+       'wiki:Nome'  → foto real da Wikimedia (pessoas, lugares, objetos famosos)
+       'ia:cena'    → imagem gerada por IA (ET, nave, criaturas, cenas imaginadas)
+       outro termo  → vídeo do Pexels; se nada combinar, imagem de IA da mesma cena.
+    Termo sem nada vira None (fundo animado)."""
+    unicos = list(dict.fromkeys(cenas))
     usados, clipes = set(), {}
     for i, termo in enumerate(unicos):
+        tipo, _, valor = termo.partition(":") if termo.split(":", 1)[0] in ("wiki", "ia") else ("", "", termo)
+        valor = valor.strip()
+        if tipo == "wiki":
+            foto = pasta / f"clipe_{i}.jpg"
+            if _foto_wikimedia(valor, foto):
+                clipes[termo] = foto
+                print(f"   🖼️  foto real {i + 1}/{len(unicos)}: '{valor}'")
+                continue
+            tipo = "ia"  # sem foto livre: desenha a cena
+        if tipo == "ia" or not config.PEXELS_API_KEY:
+            img = pasta / f"clipe_{i}.jpg"
+            if _imagem_ia(f"{valor}, realistic cinematic photo, vertical composition" if P["orientacao"] == "portrait"
+                          else f"{valor}, realistic cinematic photo", img, rapido=True):
+                clipes[termo] = img
+                print(f"   🎨 imagem IA {i + 1}/{len(unicos)}: '{valor}'")
+            else:
+                clipes[termo] = None
+            continue
         caminho = pasta / f"clipe_{i}.mp4"
         try:
-            link = _buscar_pexels(termo, usados) or _buscar_pexels(termo.split()[-1], usados)
+            link = _buscar_pexels(termo, usados, exigir_relevancia=True)
+            if not link:
+                img = pasta / f"clipe_{i}.jpg"
+                if _imagem_ia(f"{termo}, realistic cinematic photo", img, rapido=True):
+                    clipes[termo] = img
+                    print(f"   🎨 imagem IA {i + 1}/{len(unicos)}: '{termo}' (sem vídeo que combine)")
+                    continue
+                link = _buscar_pexels(termo, usados) or _buscar_pexels(termo.split()[-1], usados)
             if not link:
                 raise ValueError("nenhum resultado")
             with requests.get(link, stream=True, timeout=180) as r:
@@ -198,6 +266,20 @@ def _preparar_cena(clipe: Path | None, segundos: float, destino: Path, inicio_cl
         _ffmpeg(
             "-f", "lavfi", "-i", f"gradients=s={W}x{H}:c0={c0}:c1={c1}:speed=0.02:r={FPS}",
             "-t", f"{segundos:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", destino,
+        )
+        return
+    if clipe.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"):
+        # foto: fundo desfocado preenchendo a tela + a foto inteira por cima, com zoom lento
+        quadros = max(1, int(segundos * FPS))
+        zoom = "1+0.10*on/" + str(quadros) if random.random() < 0.5 else "1.10-0.10*on/" + str(quadros)
+        _ffmpeg(
+            "-loop", "1", "-i", clipe, "-filter_complex",
+            f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=-0.15[f];"
+            f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease[a];"
+            f"[f][a]overlay=(W-w)/2:(H-h)/2,scale={W * 2}:{H * 2},"
+            f"zoompan=z='{zoom}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={quadros}:s={W}x{H}:fps={FPS},"
+            "setsar=1,format=yuv420p",
+            "-t", f"{segundos:.3f}", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", destino,
         )
         return
     # zoom lento (efeito "Ken Burns"), alternando a direção, para não ficar parado
@@ -312,16 +394,19 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
 
 
 # ───────────────────────── thumbnail (capa) ─────────────────────────
-def _imagem_ia(prompt: str, destino: Path) -> bool:
+def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
     """Gera uma imagem do tema com IA grátis (Pollinations, sem chave). False se falhar."""
     from urllib.parse import quote
     from PIL import Image
     estilo = ("cinematic YouTube thumbnail background, dramatic lighting, high contrast, vivid colors, "
               "sharp focus, mysterious atmosphere, no text, no letters, no watermark")
+    if rapido:  # imagem de cena do vídeo (não é capa)
+        estilo = "photorealistic, cinematic lighting, high detail, no text, no letters, no watermark"
+    larg, alt = (1080, 1920) if (rapido and P["orientacao"] == "portrait") else (1280, 720)
     url = (f"https://image.pollinations.ai/prompt/{quote(prompt + ', ' + estilo)}"
-           f"?width=1280&height=720&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
+           f"?width={larg}&height={alt}&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
     cab = {"User-Agent": "Mozilla/5.0 (AutoVideo; +https://github.com)", "Accept": "image/*"}
-    for tentativa in range(4):
+    for tentativa in range(2 if rapido else 4):
         try:
             r = requests.get(url + ("&referrer=autovideo" if tentativa % 2 else ""), headers=cab, timeout=150)
             tipo = r.headers.get("content-type", "")
@@ -333,7 +418,8 @@ def _imagem_ia(prompt: str, destino: Path) -> bool:
         except Exception as erro:
             print(f"   capa IA: tentativa {tentativa + 1} falhou ({erro})")
         time.sleep(8)
-    print("::warning title=Capa::A IA de imagem não respondeu; usei uma cena do vídeo.")
+    if not rapido:
+        print("::warning title=Capa::A IA de imagem não respondeu; usei uma cena do vídeo.")
     return False
 
 
