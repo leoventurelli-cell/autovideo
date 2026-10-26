@@ -34,7 +34,13 @@ jobs:
       - name: Instalar dependências
         run: |
           pip install -r requirements.txt
-          (command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)) >/dev/null
+          if ! command -v ffmpeg >/dev/null; then
+            if ! timeout 240 bash -c "sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg"; then
+              curl -sSL --retry 3 -o /tmp/ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+              mkdir -p /tmp/ffmpeg && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1
+              sudo cp /tmp/ffmpeg/ffmpeg /tmp/ffmpeg/ffprobe /usr/local/bin/
+            fi
+          fi
           mkdir -p fontes
           [ -f fontes/Poppins-Bold.ttf ] || curl -sSL -o fontes/Poppins-Bold.ttf https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf
       - name: Criar e enviar a capa
