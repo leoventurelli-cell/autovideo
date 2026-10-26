@@ -20,6 +20,7 @@ Regras do roteiro:
 - A primeira frase é um gancho forte que prende nos 2 primeiros segundos.
 - Frases curtas e diretas, linguagem falada, sem emojis, sem hashtags, sem "olá pessoal".
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
+- Nunca atribua acontecimentos, descobertas ou falas a empresas, marcas ou pessoas reais se isso não for amplamente conhecido ou não estiver nas manchetes dadas.
 - Mistérios: só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
 - Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
 - Termine com uma frase curta que convide a seguir o canal ou comentar.
@@ -33,7 +34,7 @@ Responda SOMENTE com um JSON neste formato:
   "roteiro": "texto completo da narração",
   "descricao": "descrição de 2 ou 3 frases para o post",
   "hashtags": ["#exemplo", "#outra", "#shorts"],
-  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração, ex: 'deep ocean', 'ancient pyramid'"]
+  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'satellite orbit', 'ancient pyramid'). Evite pessoas em escritório, reuniões, finanças/bolsa e casa, a menos que o roteiro fale disso"]
 }}"""
 
 EXEMPLO = {
@@ -191,11 +192,11 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
         usados=", ".join(usados[-60:]) or "nenhum",
         idioma=config.IDIOMA,
         segundos=segundos,
-        palavras=int(segundos * 2.6),
+        palavras=int(segundos * 2.1),  # a voz neural + pausas fala ~2,1 palavras/s
         cenas=max(6, round(segundos / 7)),
     )
     pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
-    minimo = int(segundos * 2.6 * 0.85)
+    minimo = int(segundos * 2.1 * 0.85)
     dados = pedir(prompt)
     for _ in range(2):  # a IA às vezes escreve curto demais: pede para expandir
         qtd = len(str(dados.get("roteiro", "")).split())
@@ -242,7 +243,7 @@ Responda SOMENTE com um JSON neste formato:
   "descricao": "descrição de 3 a 5 frases para o YouTube, com palavras-chave",
   "hashtags": ["#curiosidades", "#outra", "#outra"],
   "partes": [
-    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 termos de busca EM INGLÊS para vídeos de banco, ex: 'deep ocean'"]}}
+    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 termos de busca EM INGLÊS para vídeos de banco com o objeto/lugar LITERAL desta parte, ex: 'deep ocean'; evite escritório, reuniões e finanças"]}}
   ]
 }}"""
 
@@ -308,6 +309,7 @@ Técnicas obrigatórias:
 - Título com "lacuna de curiosidade": desperta a pergunta sem entregar a resposta.
   Use número, contraste, segredo, exagero plausível ou "ninguém te conta". Palavra-chave do assunto no começo.
 - Nada de mentira ou promessa que o vídeo não cumpre (isso derruba a retenção e o alcance).
+- Português impecável: revise concordância e grafia (ex.: "sinais misteriosos", nunca "sinais mistérios").
 - Eleição/política: nada de "resultado cravado" ou "vai ganhar com certeza"; use "análise", "o que as pesquisas mostram".
 - Escreva como gente fala, sem soar como propaganda.
 

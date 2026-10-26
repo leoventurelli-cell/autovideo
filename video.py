@@ -41,6 +41,18 @@ def _ffmpeg(*args):
         raise RuntimeError(f"FFmpeg falhou:\n{resultado.stderr[-1500:]}")
 
 
+def _ganho_para(audio: Path, alvo: float = -14.0) -> float:
+    """Mede o volume da narração (LUFS) e devolve quantos dB somar para chegar no alvo."""
+    try:
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(audio), "-af",
+                            "loudnorm=print_format=json", "-f", "null", "-"], capture_output=True, text=True)
+        medido = float(json.loads(r.stderr[r.stderr.rindex("{"):r.stderr.rindex("}") + 1])["input_i"])
+        return max(-10.0, min(20.0, alvo - medido))
+    except Exception as erro:
+        print(f"   (não consegui medir o volume: {erro}; usando +6 dB)")
+        return 6.0
+
+
 def duracao(arquivo: Path) -> float:
     saida = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(arquivo)],
@@ -261,9 +273,11 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         )
     else:
         audio_filtro = f"[1:a]apad=pad_dur={CAUDA}[a0]"
-    # volume no padrão das redes (-14 LUFS) e em estéreo 48 kHz: áudio mono e baixo
-    # às vezes sai mudo/fraco no TikTok
-    audio_filtro += ";[a0]loudnorm=I=-14:TP=-1.5:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo[a]"
+    # volume no padrão das redes (~-14 LUFS) com ganho FIXO (medido antes) + limitador suave:
+    # o loudnorm dinâmico ficava subindo/abaixando o som e "cortava" o começo das frases.
+    ganho = _ganho_para(audio, alvo=-14.0)
+    audio_filtro += (f";[a0]volume={ganho:.1f}dB,alimiter=limit=0.89:attack=5:release=80:level=false,"
+                     "aformat=sample_rates=48000:channel_layouts=stereo[a]")
 
     legendas_esc = str(legendas).replace("\\", "/").replace(":", "\\:")
     fontes_esc = str(config.PASTA_FONTES).replace("\\", "/").replace(":", "\\:")

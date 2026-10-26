@@ -84,6 +84,10 @@ científicos bem conhecidos relacionados a ela (ex.: em alta "eclipse" → "o mi
 assustaram reis"; em alta um filme de terror → "o caso real que inspirou o filme").
 
 Regras:
+- A ligação entre a tendência e o tema tem que ser REAL e direta (o vídeo fala do mesmo assunto da tendência),
+  nunca uma associação forçada. Ex. ruim: em alta "operadora fechou acordo com Starlink" → "sinais misteriosos
+  captados pela Starlink" (isso é inventado). Se a ligação for fraca, responda {{"tema": ""}}.
+- Nunca atribua mistérios, descobertas ou acontecimentos a empresas, marcas ou pessoas reais.
 - Prefira tendências que rendem curiosidade ou mistério; evite fofoca, futebol puro, ofertas e loterias.
 - NÃO escolha tragédias recentes com vítimas, crimes envolvendo pessoas comuns, saúde de pessoas reais,
   nem eleição/política partidária.
