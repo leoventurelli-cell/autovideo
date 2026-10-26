@@ -33,6 +33,7 @@ def _env(nome: str, padrao: str = "") -> str:
 # Troque o nicho aqui. Exemplos: "curiosidades sobre o espaço",
 # "histórias de terror curtas", "fatos sobre animais", "dicas de dinheiro"
 NICHO = _env("NICHO", "curiosidades incríveis e pouco conhecidas sobre o mundo")
+CANAL = _env("CANAL", "")  # nome do canal, usado nas descrições ("Se inscreva no ...")
 IDIOMA = "português do Brasil"
 DURACAO_ALVO_SEGUNDOS = int(_env("DURACAO_ALVO", "75"))  # TikTok paga só vídeos com mais de 1 minuto
 # Vídeo longo (YouTube, horizontal 16:9). Acima de 8 minutos o YouTube libera anúncios no meio do vídeo.

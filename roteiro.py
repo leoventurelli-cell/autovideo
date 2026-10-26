@@ -319,7 +319,7 @@ Técnicas obrigatórias:
 Responda SOMENTE com um JSON:
 {{
   "titulo_youtube": "até 60 caracteres, com 1 palavra em MAIÚSCULAS para destacar, palavra-chave no início",
-  "descricao_youtube": "3 a 5 frases: a 1ª repete a promessa do título com a palavra-chave; depois resume o que a pessoa vai aprender; termina pedindo inscrição e comentário com uma pergunta",
+  "descricao_youtube": "descrição envolvente em 4 blocos separados por linha em branco (use \\n\\n): 1) gancho de 1-2 frases que conta o essencial do caso com a palavra-chave e 1 emoji; 2) contexto com 1-3 fatos concretos e verdadeiros QUE ESTÃO NO ROTEIRO (nomes, lugares, anos); 3) uma pergunta provocativa para comentarem + 1 emoji; 4) convite para se inscrever{canal_txt}. Tom de conversa, sem exagero, sem lista de minutos/capítulos, sem hashtags (elas vão à parte), no máximo 900 caracteres",
   "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
   "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
   "hashtags_youtube": ["3 a 5 hashtags relevantes"],
@@ -336,6 +336,7 @@ def textos_virais(dados: dict, formato: str = "curto") -> dict:
         return dados
     pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
     prompt = PROMPT_VIRAL.format(
+        canal_txt=f" no canal {config.CANAL}" if config.CANAL else "",
         idioma=config.IDIOMA,
         formato_desc="vídeo curto vertical (TikTok / YouTube Shorts)" if formato == "curto"
         else "vídeo longo horizontal para YouTube, com capítulos",

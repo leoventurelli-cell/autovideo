@@ -38,10 +38,7 @@ def descricao(roteiro: dict, formato: str, capitulos: list[tuple[float, str]] | 
     if formato == "curto" and "#shorts" not in [h.lower() for h in hashtags]:
         hashtags.append("#shorts")
     texto = roteiro.get("descricao", "").strip()
-    if capitulos and len(capitulos) >= 3:
-        # o YouTube cria capítulos se a lista começa em 0:00 e tem 3+ itens
-        texto += "\n\n📌 Capítulos\n" + "\n".join(
-            f"{_tempo(0 if i == 0 else t)} {titulo}" for i, (t, titulo) in enumerate(capitulos))
+    # sem lista de capítulos com minutos na descrição (preferência do canal)
     texto += "\n\n" + " ".join(hashtags)
     return texto.strip()[:4900]
 
