@@ -17,13 +17,15 @@ PROMPT = """Crie a thumbnail de um vídeo do YouTube em {idioma}.
 Título: {titulo}
 Assunto: {assunto}
 Responda SOMENTE com um JSON:
-{{"texto_capa": "2 a 4 palavras de impacto que despertem curiosidade (ex: 'NINGUÉM EXPLICA ISSO')",
+{{"texto_capa": "2 a 4 palavras de impacto ligadas ao tema concreto (nunca 'segredo')",
   "prompt_capa": "descrição EM INGLÊS de UMA cena cinematográfica e chamativa do tema (objeto/lugar principal em close, iluminação dramática), sem texto"}}"""
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--id", required=True)
+    ap.add_argument("--texto", default="", help="frase da capa (se vazio, a IA escolhe)")
+    ap.add_argument("--cena", default="", help="cena da imagem em inglês (se vazio, a IA escolhe)")
     a = ap.parse_args()
     videos = json.loads(PAINEL.read_text(encoding="utf-8"))
     v = next((x for x in videos if _id_de(x) == a.id), None)
@@ -36,7 +38,13 @@ def main():
 
     pasta = Path(tempfile.mkdtemp())
     arquivo = _baixar(v["mp4"], pasta / Path(v["mp4"]).name)
-    textos = roteiro._pedir_ao_groq(PROMPT.format(idioma=config.IDIOMA, titulo=v["titulo"], assunto=v.get("assunto", "")))
+    textos = {}
+    if not (a.texto and a.cena):
+        textos = roteiro._pedir_ao_groq(PROMPT.format(idioma=config.IDIOMA, titulo=v["titulo"], assunto=v.get("assunto", "")))
+    if a.texto:
+        textos["texto_capa"] = a.texto
+    if a.cena:
+        textos["prompt_capa"] = a.cena
     capa = video.criar_capa(arquivo, textos.get("texto_capa") or v["titulo"], pasta / f"{a.id}-capa.jpg",
                             prompt_ia=textos.get("prompt_capa") or v.get("assunto"))
 

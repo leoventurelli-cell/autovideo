@@ -7,6 +7,12 @@ on:
       id:
         description: "ID do vídeo (aparece no painel)"
         required: true
+      texto:
+        description: "Frase da capa (opcional; vazio = a IA escolhe)"
+        required: false
+      cena:
+        description: "Cena da imagem, em inglês (opcional; vazio = a IA escolhe)"
+        required: false
 
 permissions:
   contents: write
@@ -38,7 +44,9 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           NICHO: ${{ vars.NICHO }}
           ID: ${{ github.event.inputs.id }}
-        run: python capa.py --id "$ID"
+          TEXTO: ${{ github.event.inputs.texto }}
+          CENA: ${{ github.event.inputs.cena }}
+        run: python capa.py --id "$ID" --texto "$TEXTO" --cena "$CENA"
       - name: Mostrar a capa no painel
         env:
           GH_TOKEN: ${{ github.token }}

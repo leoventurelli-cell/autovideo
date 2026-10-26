@@ -309,6 +309,9 @@ Técnicas obrigatórias:
 - Título com "lacuna de curiosidade": desperta a pergunta sem entregar a resposta.
   Use número, contraste, segredo, exagero plausível ou "ninguém te conta". Palavra-chave do assunto no começo.
 - Nada de mentira ou promessa que o vídeo não cumpre (isso derruba a retenção e o alcance).
+- VARIE as fórmulas: NÃO use a palavra "segredo"/"segredos" (o canal já usou demais) nem "ninguém te conta".
+- Notícia, eleição, política, economia ou saúde: título e capa INFORMATIVOS e neutros (ex.: "os 8 desafios do
+  próximo governo"), sem sensacionalismo, sem "o que não querem que você veja".
 - Português impecável: revise concordância e grafia (ex.: "sinais misteriosos", nunca "sinais mistérios").
 - Eleição/política: nada de "resultado cravado" ou "vai ganhar com certeza"; use "análise", "o que as pesquisas mostram".
 - Escreva como gente fala, sem soar como propaganda.
@@ -320,7 +323,7 @@ Responda SOMENTE com um JSON:
   "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
   "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
   "hashtags_youtube": ["3 a 5 hashtags relevantes"],
-  "texto_capa": "frase da thumbnail: 2 a 4 palavras de impacto em português, que despertem curiosidade (ex: 'NINGUÉM EXPLICA ISSO')",
+  "texto_capa": "frase da thumbnail: 2 a 4 palavras de impacto em português, ligadas ao tema concreto do vídeo (ex: 'A ILHA PROIBIDA', '8 DESAFIOS DO BRASIL'); nunca 'segredo'",
   "prompt_capa": "descrição EM INGLÊS de UMA cena cinematográfica e chamativa para a thumbnail deste vídeo (o objeto/lugar principal do tema, em close, iluminação dramática), sem texto",
   "titulo_short": "título de um Short de 1 minuto que divulga este vídeo (até 55 caracteres, provoca curiosidade, palavra-chave no início)",
   "tags_youtube": ["10 a 15 palavras-chave de busca em português, do específico ao amplo"]
