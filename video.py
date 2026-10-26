@@ -73,7 +73,22 @@ def _buscar_pexels(termo: str, ja_usados: set) -> str | None:
     videos = [v for v in r.json().get("videos", []) if v["id"] not in ja_usados and v["duration"] >= 4]
     if not videos:
         return None
-    escolhido = random.choice(videos[:8])
+    # escolhe pelo que o vídeo REALMENTE mostra (a descrição vem no endereço do Pexels),
+    # e evita cenas genéricas de escritório/negócios que não combinam com o assunto
+    palavras_termo = {w for w in termo.lower().replace("-", " ").split() if len(w) > 2}
+    genericas = {"office", "business", "meeting", "handshake", "laptop", "stock", "trading", "kitchen",
+                 "corporate", "businessman", "businesswoman", "coworkers", "presentation", "typing"}
+
+    def nota(v):
+        slug = set(v.get("url", "").lower().rstrip("/").split("/")[-1].replace("-", " ").split())
+        pontos = 3 * len(palavras_termo & slug)
+        if (slug & genericas) and not (palavras_termo & genericas):
+            pontos -= 5
+        return pontos
+
+    ordenados = sorted(enumerate(videos), key=lambda iv: (-nota(iv[1]), iv[0]))
+    melhores = [v for _, v in ordenados[:2]]
+    escolhido = random.choice(melhores) if nota(melhores[0]) == nota(melhores[-1]) else melhores[0]
     ja_usados.add(escolhido["id"])
     deitado = P["orientacao"] == "landscape"
     arquivos = [f for f in escolhido["video_files"] if f.get("height") and f.get("width")

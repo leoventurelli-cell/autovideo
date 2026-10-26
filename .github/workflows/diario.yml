@@ -2,14 +2,12 @@ name: Vídeo diário
 
 on:
   schedule:
-    # Short todo dia às 11:47 de Brasília (14:47 UTC)
-    - cron: "47 14 * * *"
-    # reservas do Short (o GitHub às vezes pula um horário; se o Short já saiu, a reserva não faz nada)
-    - cron: "27 15,16,18 * * *"
-    # Vídeo longo (YouTube) + o Short dele todo dia às 18:17 de Brasília (21:17 UTC)
-    - cron: "17 21 * * *"
-    # reservas do vídeo longo
-    - cron: "37 22,23 * * *"
+    # O GitHub costuma atrasar (e às vezes pula) os horários agendados. Por isso o sistema
+    # "acorda" a cada 20 minutos e o passo "decidir" vê se já passou da hora e se o vídeo
+    # do dia ainda não saiu: Short a partir das 11:47 e vídeo longo a partir das 18:17 (Brasília).
+    # Quando não há nada a fazer, a execução termina em segundos.
+    - cron: "7,27,47 14-23 * * *"
+    - cron: "7,27 0-2 * * *"
   workflow_dispatch:   # botão "Run workflow" para rodar na hora
     inputs:
       formato:
@@ -28,15 +26,64 @@ on:
 permissions:
   contents: write
 
-# um vídeo por vez: pedidos repetidos esperam na fila em vez de brigar ao salvar o painel
-concurrency:
-  group: painel
-  cancel-in-progress: false
-
 jobs:
+  decidir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rodar: ${{ steps.d.outputs.rodar }}
+      formato: ${{ steps.d.outputs.formato }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docs/videos.json
+          sparse-checkout-cone-mode: false
+      - id: d
+        env:
+          EVENTO: ${{ github.event_name }}
+          FORMATO_PEDIDO: ${{ github.event.inputs.formato }}
+          HORA_SHORT: "11:47"
+          HORA_LONGO: "18:17"
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timedelta, timezone
+          agora = datetime.now(timezone(timedelta(hours=-3)))  # Brasília
+          saida = open(os.environ["GITHUB_OUTPUT"], "a")
+          if os.environ["EVENTO"] != "schedule":
+              saida.write(f"rodar=true\nformato={os.environ.get('FORMATO_PEDIDO') or 'curto'}\n")
+              raise SystemExit
+          try:
+              videos = json.load(open("docs/videos.json", encoding="utf-8"))
+          except Exception:
+              videos = []
+          hoje = agora.date().isoformat()
+          feito = lambda f: any(v.get("formato") == f and not v.get("chamada_de")
+                                and str(v.get("data", "")).startswith(hoje) for v in videos)
+          hora = lambda h: agora.replace(hour=int(h[:2]), minute=int(h[3:]), second=0, microsecond=0)
+          formato = None
+          if agora.hour < 23 or agora.minute < 30:
+              if agora >= hora(os.environ["HORA_SHORT"]) and not feito("curto"):
+                  formato = "curto"
+              elif agora >= hora(os.environ["HORA_LONGO"]) and not feito("longo"):
+                  formato = "longo"
+          atraso = ""
+          if formato:
+              alvo = hora(os.environ["HORA_SHORT" if formato == "curto" else "HORA_LONGO"])
+              atraso = f" ({int((agora - alvo).total_seconds() // 60)} min depois do horário)"
+          print(f"{agora:%H:%M} Brasília → " + (f"hora do vídeo {formato}{atraso}" if formato else "nada a fazer agora"))
+          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\n")
+          PY
+
   video:
+    needs: decidir
+    if: needs.decidir.outputs.rodar == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # um vídeo por vez: pedidos repetidos esperam na fila em vez de brigar ao salvar o painel
+    concurrency:
+      group: painel
+      cancel-in-progress: false
     env:
       TZ: America/Sao_Paulo
     steps:
@@ -86,7 +133,7 @@ jobs:
           PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
           PUBLICAR_TIKTOK: ${{ vars.PUBLICAR_TIKTOK }}
           TEMA: ${{ github.event.inputs.tema }}
-          FORMATO: ${{ github.event.inputs.formato || ((github.event.schedule == '17 21 * * *' || github.event.schedule == '37 22,23 * * *') && 'longo') || 'curto' }}
+          FORMATO: ${{ needs.decidir.outputs.formato }}
           SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
         run: |
           ARGS=()

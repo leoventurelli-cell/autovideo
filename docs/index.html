@@ -399,7 +399,7 @@
       }
       if (a.run) {
         const j = await (await fetch(`${API}/actions/runs/${a.run}/jobs`, {headers: cab(), cache: 'no-store'})).json();
-        const job = (j.jobs || [])[0];
+        const job = (j.jobs || []).find(x => x.name === "video") || (j.jobs || []).find(x => x.name !== "decidir");
         if (job) {
           if (job.status === 'completed') {
             if (job.conclusion === 'success') { await esperarSite(a); return; }
