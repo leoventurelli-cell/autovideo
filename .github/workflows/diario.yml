@@ -22,6 +22,10 @@ on:
         description: "Publicar nas redes? (desmarque para só gerar e baixar o vídeo)"
         type: boolean
         default: true
+      agendado:
+        description: "Uso interno do despertador (cron-job.org): 'sim' = decidir pelo horário"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -42,6 +46,7 @@ jobs:
         env:
           EVENTO: ${{ github.event_name }}
           FORMATO_PEDIDO: ${{ github.event.inputs.formato }}
+          AGENDADO: ${{ github.event.inputs.agendado }}
           HORA_SHORT: "11:47"
           HORA_LONGO: "18:17"
         run: |
@@ -50,7 +55,7 @@ jobs:
           from datetime import datetime, timedelta, timezone
           agora = datetime.now(timezone(timedelta(hours=-3)))  # Brasília
           saida = open(os.environ["GITHUB_OUTPUT"], "a")
-          if os.environ["EVENTO"] != "schedule":
+          if os.environ["EVENTO"] != "schedule" and os.environ.get("AGENDADO") != "sim":
               saida.write(f"rodar=true\nformato={os.environ.get('FORMATO_PEDIDO') or 'curto'}\n")
               raise SystemExit
           try:
