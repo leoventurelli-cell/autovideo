@@ -36,7 +36,10 @@ def usar_formato(formato: str):
 # ───────────────────────── utilidades ─────────────────────────
 def _ffmpeg(*args):
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *map(str, args)]
-    resultado = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        resultado = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("FFmpeg travou (mais de 15 min)")
     if resultado.returncode != 0:
         raise RuntimeError(f"FFmpeg falhou:\n{resultado.stderr[-1500:]}")
 
@@ -112,6 +115,17 @@ CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (v
 UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
 
+def _normalizar_foto(arquivo: Path):
+    """Regrava qualquer imagem (PNG, GIF, TIFF, WebP...) como JPEG RGB de tamanho razoável,
+    para o FFmpeg abrir sem surpresa."""
+    from PIL import Image
+    with Image.open(arquivo) as im:
+        im.seek(0)
+        im = im.convert("RGB")
+        im.thumbnail((2400, 2400))
+        im.save(arquivo, "JPEG", quality=92)
+
+
 def _foto_wikimedia(nome: str, destino: Path) -> bool:
     """Foto real (pessoa, lugar, objeto) da Wikipédia, só se o arquivo estiver no Wikimedia Commons
     (licença livre). Guarda autor e licença em CREDITOS."""
@@ -140,8 +154,7 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
             img = requests.get(url, headers=UA, timeout=60)
             img.raise_for_status()
             destino.write_bytes(img.content)
-            from PIL import Image
-            Image.open(destino).verify()
+            _normalizar_foto(destino)
             CREDITOS.append(f"{nome}: {autor or 'Wikimedia Commons'} ({licenca}, Wikimedia Commons)")
             return True
         except Exception as erro:
@@ -284,6 +297,17 @@ def _preparar_cena(clipe: Path | None, segundos: float, destino: Path, inicio_cl
         )
         return
     if clipe.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"):
+        try:
+            _normalizar_foto(clipe)  # imagem quebrada falha aqui, antes do FFmpeg
+            return _cena_de_foto(clipe, segundos, destino)
+        except Exception as erro:
+            print(f"   ⚠️  foto {clipe.name} não abriu ({str(erro)[-120:]}); usando fundo animado")
+            return _preparar_cena(None, segundos, destino)
+    _cena_de_video(clipe, segundos, destino, inicio_clipe)
+
+
+def _cena_de_foto(clipe: Path, segundos: float, destino: Path):
+    if True:
         # foto: fundo desfocado preenchendo a tela + a foto inteira por cima, com zoom lento
         quadros = max(1, int(segundos * FPS))
         zoom = "1+0.10*on/" + str(quadros) if random.random() < 0.5 else "1.10-0.10*on/" + str(quadros)
@@ -296,7 +320,9 @@ def _preparar_cena(clipe: Path | None, segundos: float, destino: Path, inicio_cl
             "setsar=1,format=yuv420p",
             "-t", f"{segundos:.3f}", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", destino,
         )
-        return
+
+
+def _cena_de_video(clipe: Path, segundos: float, destino: Path, inicio_clipe: float = 0.0):
     # zoom lento (efeito "Ken Burns"), alternando a direção, para não ficar parado
     ida = random.random() < 0.5
     x = f"(in_w-{W})/2*(1-t/{segundos:.3f})" if ida else f"(in_w-{W})/2*(t/{segundos:.3f})"
@@ -428,7 +454,7 @@ def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
             tipo = r.headers.get("content-type", "")
             if r.ok and tipo.startswith("image"):
                 destino.write_bytes(r.content)
-                Image.open(destino).verify()
+                _normalizar_foto(destino)
                 return True
             print(f"   imagem IA: tentativa {tentativa + 1} → {r.status_code} (servidor ocupado)")
             if r.status_code in (402, 429):
