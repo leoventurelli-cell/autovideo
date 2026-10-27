@@ -367,8 +367,20 @@ TEXTOS:
 Responda SOMENTE com o mesmo JSON corrigido (mesmas chaves e o mesmo número de itens em "partes")."""
 
 
-def revisar_noticia(dados: dict, tema: str) -> dict:
-    """Checagem de fatos dos vídeos de notícia antes de gravar a narração."""
+# em notícia sobre pessoa real, estes termos acusam (ou inventam crime) e não podem ir ao ar
+PROIBIDAS_NOTICIA = ("identidade falsa", "documento falso", "documentos falsos", "passaporte falso", "fugiu", "fuga de",
+                     "foragido", "fugitivo", "criminoso", "culpado", "desaparecido", "escondido", "escondendo")
+
+
+def _proibidas(dados: dict) -> list[str]:
+    texto = " ".join(str(dados.get(k, "")) for k in ("roteiro", "titulo", "descricao", "texto_capa", "titulo_short",
+                                                     "legenda_tiktok")).lower()
+    return [p for p in PROIBIDAS_NOTICIA if p in texto]
+
+
+def revisar_noticia(dados: dict, tema: str, _tentativa: int = 1) -> dict:
+    """Checagem de fatos dos vídeos de notícia antes de gravar a narração.
+    Se sobrar termo acusatório depois de 2 revisões, o vídeo NÃO é publicado."""
     pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
     longo = bool(dados.get("partes"))
     chaves = ["titulo", "descricao", "texto_capa", "titulo_short", "legenda_tiktok"]
@@ -401,6 +413,14 @@ def revisar_noticia(dados: dict, tema: str) -> dict:
     soltos = [n for n in re.findall(r"\d+(?:[.,]\d+)?\s?%", dados.get("roteiro", "")) if n not in ok]
     if soltos:
         print(f"::warning title=Checagem::a narração cita números que não estão no pedido: {soltos}")
+    achados = _proibidas(dados)
+    if achados:
+        if _tentativa >= 2:
+            raise RuntimeError(f"Vídeo de notícia NÃO publicado: o texto ainda acusa ou inventa ({achados}).")
+        print(f"   ⚠️  termos proibidos na notícia: {achados}; revisando de novo")
+        tema_mais = (f"{tema}\nPROIBIDO usar estes termos (são falsos ou acusatórios): {', '.join(achados)}. "
+                     "Não invente documento falso, crime nem fuga que os FATOS não citam.")
+        return revisar_noticia(dados, tema_mais, _tentativa + 1)
     print(f"   🔎 checagem de fatos feita → {dados['titulo']}")
     return dados
 
