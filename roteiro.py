@@ -34,7 +34,7 @@ Responda SOMENTE com um JSON neste formato:
   "roteiro": "texto completo da narração",
   "descricao": "descrição de 2 ou 3 frases para o post",
   "hashtags": ["#exemplo", "#outra", "#shorts"],
-  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'); use SEMPRE o nome COMPLETO do artigo, nunca apelido (ex: 'wiki:Luiz Inácio Lula da Silva', nunca 'wiki:Lula', que é o molusco). Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Se o vídeo é sobre ETs, OVNIs, naves ou criaturas, pelo menos METADE das cenas deve ser 'ia:' mostrando o ser/a nave descritos no roteiro, e a cidade/lugar real do caso deve aparecer como 'wiki:' (ex: 'wiki:Varginha'). Evite pessoas em escritório, reuniões, finanças e casa"]
+  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'); use SEMPRE o nome COMPLETO do artigo, nunca apelido (ex: 'wiki:Luiz Inácio Lula da Silva', nunca 'wiki:Lula', que é o molusco); não use 'wiki:' para jornais, sites ou empresas. As marcas 'wiki:'/'ia:' vão SÓ aqui em cenas, NUNCA no roteiro falado. Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Se o vídeo é sobre ETs, OVNIs, naves ou criaturas, pelo menos METADE das cenas deve ser 'ia:' mostrando o ser/a nave descritos no roteiro, e a cidade/lugar real do caso deve aparecer como 'wiki:' (ex: 'wiki:Varginha'). Evite pessoas em escritório, reuniões, finanças e casa"]
 }}"""
 
 EXEMPLO = {
@@ -179,6 +179,19 @@ def _pedir_ao_groq(prompt: str) -> dict:
         return dados
 
 
+def limpar_narracao(texto: str) -> str:
+    """Tira da fala as marcas de cena ('wiki:Nome', 'ia:descrição') que a IA às vezes mistura na narração."""
+    t = str(texto or "")
+    # frase que é só a lista de cenas lida em voz alta ("wiki:A, wiki:B, wiki:C..."): sai inteira
+    frases = re.split(r"(?<=[.!?\n])", t)
+    t = "".join(f for f in frases if len(re.findall(r"\b(?:wiki|ia)\s*:", f, re.I)) < 3)
+    t = re.sub(r"\bia\s*:\s*[^,.;!?\n]+", "", t, flags=re.I)  # descrição de imagem em inglês: sai inteira
+    t = re.sub(r"\bwiki\s*:\s*", "", t, flags=re.I)              # nome real: fica só o nome
+    t = re.sub(r"\s*\((?:Brasil|Brazil|Argentina|EUA|cidade|país)\)", "", t)  # "(Brasil)" do nome do artigo
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    return re.sub(r"\s+([,.!?])", r"\1", t).strip()
+
+
 def gerar(tema: str | None, usados: list[str]) -> dict:
     """Retorna dict com assunto, titulo, roteiro, descricao, hashtags e cenas."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
@@ -209,6 +222,7 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
     faltando = {"titulo", "roteiro", "cenas"} - dados.keys()
     if faltando:
         raise ValueError(f"Roteiro veio incompleto, faltou: {faltando}")
+    dados["roteiro"] = limpar_narracao(dados["roteiro"])
     dados.setdefault("assunto", dados["titulo"])
     dados.setdefault("descricao", "")
     dados.setdefault("hashtags", ["#shorts"])
@@ -283,6 +297,7 @@ def gerar_longo(tema: str | None, usados: list[str]) -> dict:
     if len(partes) < 3:
         raise ValueError("Roteiro longo veio sem partes suficientes.")
     for p in partes:
+        p["texto"] = limpar_narracao(p["texto"])
         p["titulo"] = str(p.get("titulo") or "Parte").strip()[:60]
         p["cenas"] = [c for c in p.get("cenas", []) if str(c).strip()][:6] or [dados.get("assunto", "nature")]
     dados["partes"] = partes
@@ -359,6 +374,7 @@ Abaixo estão os textos de um vídeo em JSON. Corrija SOMENTE o que violar as re
 3) alegações apresentadas como certeza ou acusação (troque por "teria", "suposta", "segundo");
 4) títulos, capa e legendas sensacionalistas (deixe informativos e neutros, sem MAIÚSCULAS de impacto).
 Explicações gerais sobre leis e instituições podem ficar, se estiverem corretas e sem números inventados.
+A narração ("partes") é o texto FALADO: nunca escreva nela 'wiki:', 'ia:' nem listas de cenas.
 Mantenha o resto do texto igual e com tamanho parecido (a narração já tem duração certa).
 
 TEXTOS:
@@ -393,6 +409,7 @@ def revisar_noticia(dados: dict, tema: str, _tentativa: int = 1) -> dict:
         return dados
     partes = [str(x).strip() for x in r.get("partes", [])]
     if len(partes) == len(textos["partes"]) and all(len(p.split()) >= 0.7 * len(o.split()) for p, o in zip(partes, textos["partes"])):
+        partes = [limpar_narracao(p) for p in partes]
         if longo:
             for p, novo in zip(dados["partes"], partes):
                 p["texto"] = novo
@@ -413,6 +430,8 @@ def revisar_noticia(dados: dict, tema: str, _tentativa: int = 1) -> dict:
     soltos = [n for n in re.findall(r"\d+(?:[.,]\d+)?\s?%", dados.get("roteiro", "")) if n not in ok]
     if soltos:
         print(f"::warning title=Checagem::a narração cita números que não estão no pedido: {soltos}")
+    if re.search(r"\bwiki\b|\bia\s*:", dados.get("roteiro", ""), re.I):
+        raise RuntimeError("Vídeo NÃO publicado: a narração ainda tem marcas de cena (wiki:/ia:).")
     achados = _proibidas(dados)
     if achados:
         if _tentativa >= 2:
