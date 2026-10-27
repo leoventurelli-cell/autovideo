@@ -128,6 +128,8 @@ Regras:
   captados pela Starlink" (isso é inventado). Se a ligação for fraca, responda {{"tema": ""}}.
 - Nunca atribua mistérios, descobertas ou acontecimentos a empresas, marcas ou pessoas reais.
 - Prefira tendências que rendem curiosidade ou mistério; evite fofoca, futebol puro, ofertas e loterias.
+- NUNCA transforme em "mistério" assuntos do dia a dia: falta de luz/água/internet, chuva e previsão do tempo,
+  trânsito, preços, salário, INSS, Pix, concursos, programas de TV. Isso não é curiosidade, é serviço.
 - PROIBIDO: qualquer notícia com mortos, feridos, vítimas, acidentes, crimes, desastres ou luto (ex.: "casal morre
   atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, fofoca sobre a vida pessoal.
 - Política, ciência e tecnologia: só entram se for um acontecimento GRANDE do dia, que todo mundo está comentando
@@ -187,7 +189,12 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
     if noticia and not dados.get("manchetes"):
         print("   notícia sem manchetes para conferir; a IA escolhe um mistério forte.")
         return None
-    if nota < (7 if noticia else 8):
+    cotidiano = r"apag[ãa]o|falta de (luz|energia|[áa]gua)|energia el[ée]trica|previs[ãa]o do tempo|chuva|temporal|" \
+                r"tr[âa]nsito|pre[çc]o|sal[áa]rio|inss|pix|concurso|enem|loteria|mega-sena|bbb|novela"
+    if re.search(cotidiano, f"{dados.get('tendencia', '')} {dados.get('tema', '')}", re.I):
+        print(f"   '{dados.get('tema')}' é assunto do dia a dia, não curiosidade; a IA escolhe um mistério forte.")
+        return None
+    if nota < (7 if noticia else 9):
         print(f"   '{dados.get('tema')}' tem pouca curiosidade (nota {nota}); a IA escolhe um mistério forte.")
         return None
     if _tragico(dados.get("tendencia"), dados.get("tema"), dados.get("angulo"), *dados.get("manchetes", [])):
