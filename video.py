@@ -453,10 +453,19 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
 
 
 # ───────────────────────── thumbnail (capa) ─────────────────────────
+# o serviço grátis de imagens às vezes fica lotado: para não atrasar o horário do vídeo,
+# depois de 2 falhas seguidas (ou 8 minutos gastos) as cenas usam fotos reais / banco de vídeo
+_IA = {"inicio": None, "falhas_seguidas": 0}
+LIMITE_IA_SEGUNDOS = 8 * 60
+
+
 def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
     """Gera uma imagem do tema com IA grátis (Pollinations, sem chave). False se falhar."""
     from urllib.parse import quote
-    from PIL import Image
+    if rapido:
+        _IA["inicio"] = _IA["inicio"] or time.time()
+        if _IA["falhas_seguidas"] >= 2 or time.time() - _IA["inicio"] > LIMITE_IA_SEGUNDOS:
+            return False  # serviço lotado hoje: não espera mais
     estilo = ("cinematic YouTube thumbnail background, dramatic lighting, high contrast, vivid colors, "
               "sharp focus, mysterious atmosphere, no text, no letters, no watermark")
     if rapido:  # imagem de cena do vídeo (não é capa)
@@ -465,21 +474,26 @@ def _imagem_ia(prompt: str, destino: Path, rapido: bool = False) -> bool:
     url = (f"https://image.pollinations.ai/prompt/{quote(prompt + ', ' + estilo)}"
            f"?width={larg}&height={alt}&nologo=true&enhance=true&seed={random.randint(1, 99999)}")
     cab = {"User-Agent": "Mozilla/5.0 (AutoVideo; +https://github.com)", "Accept": "image/*"}
-    for tentativa in range(3 if rapido else 4):
+    for tentativa in range(2 if rapido else 4):
         try:
             r = requests.get(url + ("&referrer=autovideo" if tentativa % 2 else ""), headers=cab,
-                             timeout=100 if rapido else 150)
+                             timeout=60 if rapido else 150)
             tipo = r.headers.get("content-type", "")
             if r.ok and tipo.startswith("image"):
                 destino.write_bytes(r.content)
                 _normalizar_foto(destino)
+                _IA["falhas_seguidas"] = 0
                 return True
             print(f"   imagem IA: tentativa {tentativa + 1} → {r.status_code} (servidor ocupado)")
             if r.status_code in (402, 429):
-                time.sleep(25)  # limite de pedidos do serviço grátis: espera a fila andar
+                time.sleep(10 if rapido else 25)  # limite de pedidos do serviço grátis: espera a fila andar
         except Exception as erro:
             print(f"   imagem IA: tentativa {tentativa + 1} falhou ({erro})")
-        time.sleep(8)
+        time.sleep(4 if rapido else 8)
+    if rapido:
+        _IA["falhas_seguidas"] += 1
+        if _IA["falhas_seguidas"] == 2:
+            print("::warning title=Imagens de IA::serviço de imagens lotado; as próximas cenas usam fotos reais e banco de vídeo.")
     if not rapido:
         print("::warning title=Capa::A IA de imagem não respondeu; usei uma cena do vídeo.")
     return False
