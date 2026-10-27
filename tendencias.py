@@ -4,6 +4,7 @@ O vídeo automático usa a tendência como gancho e aprofunda o assunto com fato
 apoiado nas manchetes do dia (para não inventar detalhes do acontecimento).
 """
 import json
+import re
 import xml.etree.ElementTree as ET
 
 import requests
@@ -54,6 +55,8 @@ NOTICIAS_MISTERIO = [  # notícias dos últimos 3 dias que já nascem curiosas
     _GN + "mal-assombrado+OR+assombra%C3%A7%C3%A3o+OR+fantasma+OR+%22lugar+abandonado%22+when:3d",
     _GN + "arque%C3%B3logos+OR+%22descoberta+rara%22+OR+%22cientistas+descobrem%22+OR+f%C3%B3ssil+when:3d",
     _GN + "OVNI+OR+%22fen%C3%B4meno+estranho%22+OR+%22luzes+no+c%C3%A9u%22+OR+NASA+when:3d",
+    _GN + "%22novo+tratamento%22+OR+%22estudo+revela%22+OR+%22pesquisadores+descobrem%22+OR+vacina+OR+terapia+when:3d",
+    _GN + "%22descoberta+cient%C3%ADfica%22+OR+%22avan%C3%A7o+da+medicina%22+OR+%22cientistas+criam%22+OR+telesc%C3%B3pio+when:3d",
 ]
 
 # palavras de notícia com vítima/tragédia/crime: essas tendências NUNCA viram vídeo
@@ -130,6 +133,8 @@ Regras:
 - Política, ciência e tecnologia: só entram se for um acontecimento GRANDE do dia, que todo mundo está comentando
   (ex.: decisão histórica, descoberta científica, lançamento espacial). Nesse caso marque "tipo": "noticia";
   o vídeo vai ser jornalístico e neutro, só com o que está nas manchetes, sem acusar ninguém.
+- Descobertas da ciência e da medicina (novo tratamento, vacina, terapia, estudo surpreendente) são ótimas: marque
+  "tipo": "noticia". Nada de "cura milagrosa" ou promessa; o vídeo diz em que fase está a pesquisa.
 - Prefira as notícias de mistério/descoberta/ciência acima; das buscas do Google use só as que já são curiosidade
   (fenômeno no céu, descoberta, lugar misterioso, filme/série de mistério).
 - Sobre o acontecimento de hoje, só afirme o que está nas manchetes; o resto do vídeo é aprofundamento com fatos conhecidos.
@@ -197,6 +202,11 @@ def tema_com_contexto(escolha: dict) -> str:
     """Texto do tema que vai para o roteirista, com o gancho de hoje e as manchetes como base."""
     noticia = str(escolha.get("tipo", "")).lower().startswith("not")
     partes = [escolha["tema"]]
+    if noticia and re.search(r"tratament|vacina|terapia|medic|doen|c[âa]ncer|sa[úu]de|rem[ée]dio|cura|estudo", " ".join(
+            [escolha.get("tema", ""), escolha.get("tendencia", "") or "", *escolha.get("manchetes", [])]), re.I):
+        partes.append("SAÚDE: diga em que fase está (estudo em laboratório, em animais, testes em pessoas ou já "
+                      "aprovado), quem pesquisou e que ainda não é cura garantida se não for; nunca indique remédio, "
+                      "dose ou que alguém pare um tratamento; termine lembrando que a pessoa deve falar com um médico.")
     if noticia:  # ativa o modo notícia do roteiro: título neutro + checagem de fatos com as manchetes
         partes.insert(0, "NOTÍCIA DO DIA, tom jornalístico neutro, sem acusar ninguém e sem afirmar o que não está "
                          "nas manchetes; use 'segundo' e 'teria' para o que não é confirmado; não cite porcentagens "

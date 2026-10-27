@@ -23,6 +23,7 @@ Regras do roteiro:
 - Nunca atribua acontecimentos, descobertas ou falas a empresas, marcas ou pessoas reais se isso não for amplamente conhecido ou não estiver nas manchetes dadas.
 - Mistérios: só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
 - Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
+- Ciência e medicina: diga em que fase está a pesquisa (laboratório, animais, testes em pessoas, aprovado); nunca prometa cura, nunca indique remédio ou dose; se for saúde, termine lembrando de procurar um médico.
 - Termine com uma frase curta que convide a seguir o canal ou comentar.
 - Não escreva indicações de cena, só o texto que será narrado.
 - O roteiro PRECISA ter pelo menos {palavras} palavras: desenvolva com 3 a 5 fatos, exemplos e detalhes curiosos.
@@ -207,6 +208,8 @@ CATEGORIAS_CURIOSAS = [
     "OVNIs e casos investigados oficialmente por governos ou forças armadas",
     "construções antigas que até hoje intrigam engenheiros e historiadores",
     "acontecimentos bizarros e reais da história do Brasil",
+    "descobertas da ciência e da medicina que parecem ficção (tratamentos, órgãos, cérebro, genética), "
+    "dizendo em que fase está cada pesquisa, sem prometer cura",
 ]
 
 
@@ -411,7 +414,8 @@ Responda SOMENTE com o mesmo JSON corrigido (mesmas chaves e o mesmo número de 
 
 # em notícia sobre pessoa real, estes termos acusam (ou inventam crime) e não podem ir ao ar
 PROIBIDAS_NOTICIA = ("identidade falsa", "documento falso", "documentos falsos", "passaporte falso", "fugiu", "fuga de",
-                     "foragido", "fugitivo", "criminoso", "culpado", "desaparecido", "escondido", "escondendo")
+                     "foragido", "fugitivo", "criminoso", "culpado", "desaparecido", "escondido", "escondendo",
+                     "cura milagrosa", "cura garantida", "cura definitiva", "milagre", "remédio caseiro que cura")
 
 
 def _proibidas(dados: dict) -> list[str]:
