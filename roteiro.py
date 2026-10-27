@@ -229,7 +229,7 @@ Escreva o roteiro de UM vídeo em {idioma} de cerca de {minutos} minutos de narr
 Estrutura obrigatória:
 - Parte 1 = introdução: gancho forte nos primeiros 10 segundos, diga o que a pessoa vai descobrir e peça para se inscrever no canal.
 - Partes do meio: {partes_meio} partes, cada uma com um subtítulo e de {por_parte} palavras,
-  com fatos verdadeiros, exemplos, números e curiosidades. Faça transições que prendam ("mas o mais estranho ainda está por vir").
+  com fatos verdadeiros, exemplos e curiosidades (números só se tiver certeza absoluta; em notícia, só os do pedido). Faça transições que prendam ("mas o mais estranho ainda está por vir").
 - Última parte = conclusão curta + pergunta para comentarem + convite para se inscrever.
 
 Regras: linguagem falada, frases curtas, sem emojis, sem indicações de cena, só fatos verdadeiros e verificáveis.
@@ -330,7 +330,82 @@ Responda SOMENTE com um JSON:
 }}"""
 
 
-def textos_virais(dados: dict, formato: str = "curto") -> dict:
+REGRAS_NOTICIA = """
+ATENÇÃO, ESTE VÍDEO É NOTÍCIA SOBRE PESSOAS REAIS. Estas regras valem MAIS que as técnicas acima:
+- Título, capa, título do Short e legendas INFORMATIVOS e neutros, em forma de pergunta ou "o que se sabe"
+  (ex.: "X deixou o país? O que se sabe até agora"). Sem MAIÚSCULAS de impacto, sem "fuga", "escândalo",
+  "desaparecido", "verdade", "ninguém previu", "chocante".
+- Nunca afirme como fato o que é alegação; use "teria", "suposta", "segundo".
+- Só use fatos, números, datas e porcentagens que estão em FATOS E REGRAS DO PEDIDO.
+- A pergunta para comentarem não pode sugerir culpa nem teoria da conspiração.
+FATOS E REGRAS DO PEDIDO:
+{tema}
+"""
+
+
+def modo_noticia(tema: str | None) -> bool:
+    """Pedido de notícia (pessoas reais, fatos do dia): títulos neutros e checagem de fatos."""
+    return bool(tema) and bool(re.search(r"not[íi]cia|jornal[íi]stic", tema, re.I))
+
+
+PROMPT_REVISAO = """Você é checador de fatos de um canal de notícias em {idioma}.
+
+FATOS E REGRAS DO PEDIDO (a única fonte sobre o caso):
+{tema}
+
+Abaixo estão os textos de um vídeo em JSON. Corrija SOMENTE o que violar as regras:
+1) afirmações sobre o caso que não estão nos FATOS (corte ou troque pelo fato correto);
+2) números, datas e porcentagens que não estão nos FATOS (corte; explicações gerais sem números podem ficar);
+3) alegações apresentadas como certeza ou acusação (troque por "teria", "suposta", "segundo");
+4) títulos, capa e legendas sensacionalistas (deixe informativos e neutros, sem MAIÚSCULAS de impacto).
+Explicações gerais sobre leis e instituições podem ficar, se estiverem corretas e sem números inventados.
+Mantenha o resto do texto igual e com tamanho parecido (a narração já tem duração certa).
+
+TEXTOS:
+{textos}
+
+Responda SOMENTE com o mesmo JSON corrigido (mesmas chaves e o mesmo número de itens em "partes")."""
+
+
+def revisar_noticia(dados: dict, tema: str) -> dict:
+    """Checagem de fatos dos vídeos de notícia antes de gravar a narração."""
+    pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
+    longo = bool(dados.get("partes"))
+    chaves = ["titulo", "descricao", "texto_capa", "titulo_short", "legenda_tiktok"]
+    textos = {k: dados.get(k, "") for k in chaves}
+    textos["partes"] = [p["texto"] for p in dados["partes"]] if longo else [dados.get("roteiro", "")]
+    try:
+        r = pedir(PROMPT_REVISAO.format(idioma=config.IDIOMA, tema=tema, textos=json.dumps(textos, ensure_ascii=False)))
+    except Exception as erro:
+        print(f"   ⚠️  checagem de fatos falhou ({erro}); mantendo os textos.")
+        return dados
+    partes = [str(x).strip() for x in r.get("partes", [])]
+    if len(partes) == len(textos["partes"]) and all(len(p.split()) >= 0.7 * len(o.split()) for p, o in zip(partes, textos["partes"])):
+        if longo:
+            for p, novo in zip(dados["partes"], partes):
+                p["texto"] = novo
+            dados["roteiro"] = "\n\n".join(partes)
+        else:
+            dados["roteiro"] = partes[0]
+    else:
+        print("   ⚠️  checagem de fatos devolveu a narração cortada demais; mantendo a narração original.")
+    for k in chaves:
+        if str(r.get(k, "")).strip():
+            dados[k] = str(r[k]).strip()
+    dados["titulo"] = dados["titulo"][:95]
+    # trava final: porcentagem que não está no pedido sai da descrição e das legendas
+    ok = set(re.findall(r"\d+(?:[.,]\d+)?\s?%", tema))
+    for k in ("descricao", "legenda_tiktok"):
+        frases = re.split(r"(?<=[.!?])\s+", str(dados.get(k, "")))
+        dados[k] = " ".join(f for f in frases if all(n in ok for n in re.findall(r"\d+(?:[.,]\d+)?\s?%", f)))
+    soltos = [n for n in re.findall(r"\d+(?:[.,]\d+)?\s?%", dados.get("roteiro", "")) if n not in ok]
+    if soltos:
+        print(f"::warning title=Checagem::a narração cita números que não estão no pedido: {soltos}")
+    print(f"   🔎 checagem de fatos feita → {dados['titulo']}")
+    return dados
+
+
+def textos_virais(dados: dict, formato: str = "curto", tema: str | None = None) -> dict:
     """Gera título, descrição e hashtags otimizados para cada rede e junta em `dados`."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
         return dados
@@ -344,6 +419,8 @@ def textos_virais(dados: dict, formato: str = "curto") -> dict:
         assunto=dados.get("assunto", ""),
         resumo=str(dados.get("roteiro", ""))[:1800],
     )
+    if modo_noticia(tema):
+        prompt += REGRAS_NOTICIA.format(tema=tema)
     try:
         v = pedir(prompt)
     except Exception as erro:

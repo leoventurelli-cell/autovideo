@@ -202,7 +202,9 @@ def main():
 
     print(f"🧠 Escrevendo o roteiro ({args.formato})...")
     r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
-    r = gerador_roteiro.textos_virais(r, args.formato)
+    r = gerador_roteiro.textos_virais(r, args.formato, tema)
+    if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
+        r = gerador_roteiro.revisar_noticia(r, tema)
     if tendencia:
         r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")
