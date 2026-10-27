@@ -1,0 +1,60 @@
+name: Relógio (vídeos na hora certa)
+
+# O agendamento do GitHub atrasa horas (ou pula). Este relógio fica acordado esperando o horário
+# exato e então dispara o "Vídeo diário". Ao terminar, ele mesmo agenda o próximo (corrente sem fim).
+# Os horários abaixo são alguns minutos ANTES da publicação, que é o tempo de gerar o vídeo:
+#   11:38 → Short sai ~11:47      18:02 → vídeo longo + Short saem ~18:17
+# Os dois "cron" só servem para religar a corrente caso ela caia algum dia.
+on:
+  schedule:
+    - cron: "13 9 * * *"    # ~06:13 Brasília
+    - cron: "43 16 * * *"   # ~13:43 Brasília
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: relogio
+  cancel-in-progress: true
+
+jobs:
+  esperar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Esperar o próximo horário e disparar o vídeo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, time
+          from datetime import datetime, timedelta, timezone
+          BR = timezone(timedelta(hours=-3))
+          DISPAROS = [(11, 38), (18, 2)]
+          agora = datetime.now(BR)
+          proximos = [(agora + timedelta(days=d)).replace(hour=h, minute=m, second=0, microsecond=0)
+                      for d in (0, 1) for h, m in DISPAROS]
+          alvo = min(t for t in proximos if t > agora - timedelta(minutes=1))
+          espera = (alvo - agora).total_seconds()
+          LIMITE = 5 * 3600 + 30 * 60  # um job do GitHub vive no máximo 6 h
+          if espera > LIMITE:
+              print(f"{agora:%H:%M} → próximo disparo {alvo:%d/%m %H:%M}; espero 5h30 e passo o bastão")
+              time.sleep(LIMITE)
+          else:
+              print(f"{agora:%H:%M} → esperando até {alvo:%d/%m %H:%M} Brasília ({espera / 60:.0f} min)")
+              time.sleep(max(0, espera))
+              for tentativa in range(5):
+                  if subprocess.run(["gh", "workflow", "run", "diario.yml", "-R", os.environ["REPO"],
+                                     "-f", "agendado=sim"]).returncode == 0:
+                      print(f"✅ vídeo disparado às {datetime.now(BR):%H:%M:%S}")
+                      break
+                  time.sleep(20)
+              time.sleep(90)  # o próximo relógio já começa depois deste horário
+          for tentativa in range(5):
+              if subprocess.run(["gh", "workflow", "run", "relogio.yml", "-R", os.environ["REPO"]]).returncode == 0:
+                  break
+              time.sleep(20)
+          PY

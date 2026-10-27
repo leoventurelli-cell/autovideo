@@ -117,6 +117,10 @@ def textos_da_chamada(rc: dict) -> dict:
     }
 
 
+def _automatico() -> bool:
+    return os.getenv("GITHUB_EVENT_NAME") == "schedule" or os.getenv("AGENDADO") == "sim"
+
+
 def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: float,
                          formato: str = "curto", capa: str | None = None, capitulos=None,
                          textos: dict | None = None, extra: dict | None = None):
@@ -134,6 +138,8 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
             "textos": textos or _textos_para_colar(r, formato, capitulos), **(extra or {}), **resultados}
     if r.get("tendencia"):
         item["tendencia"] = r["tendencia"]
+    if not _automatico():
+        item["manual"] = True  # pedido à mão: não conta como o vídeo do horário automático
     if r.get("_tag") and "id" not in item:
         item["id"] = r["_tag"]
     if mp4:
@@ -169,11 +175,11 @@ def main():
 
     # horário automático: se já saiu um vídeo desse formato hoje (ex.: o agendamento do GitHub
     # atrasou e alguém já gerou na mão), não repete
-    if os.getenv("GITHUB_EVENT_NAME") == "schedule":
+    if _automatico():
         try:
             hoje = datetime.now().astimezone().date().isoformat()
             lista = json.loads((config.PASTA / "docs" / "videos.json").read_text(encoding="utf-8"))
-            if any(v.get("formato") == args.formato and not v.get("chamada_de")
+            if any(v.get("formato") == args.formato and not v.get("chamada_de") and not v.get("manual")
                    and str(v.get("data", "")).startswith(hoje) for v in lista):
                 print(f"⏭️  Já tem vídeo {args.formato} de hoje no painel; o horário automático não vai repetir.")
                 return

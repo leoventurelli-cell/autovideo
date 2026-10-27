@@ -63,14 +63,16 @@ jobs:
           except Exception:
               videos = []
           hoje = agora.date().isoformat()
-          feito = lambda f: any(v.get("formato") == f and not v.get("chamada_de")
+          feito = lambda f: any(v.get("formato") == f and not v.get("chamada_de") and not v.get("manual")
                                 and str(v.get("data", "")).startswith(hoje) for v in videos)
           hora = lambda h: agora.replace(hour=int(h[:2]), minute=int(h[3:]), second=0, microsecond=0)
+          # começa alguns minutos ANTES para o vídeo ficar pronto no horário
+          # (o Short leva ~6 min para gerar; o longo + Short, ~15 min)
           formato = None
           if agora.hour < 23 or agora.minute < 30:
-              if agora >= hora(os.environ["HORA_SHORT"]) and not feito("curto"):
+              if agora >= hora(os.environ["HORA_SHORT"]) - timedelta(minutes=10) and not feito("curto"):
                   formato = "curto"
-              elif agora >= hora(os.environ["HORA_LONGO"]) and not feito("longo"):
+              elif agora >= hora(os.environ["HORA_LONGO"]) - timedelta(minutes=16) and not feito("longo"):
                   formato = "longo"
           atraso = ""
           if formato:
@@ -139,6 +141,7 @@ jobs:
           PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
           PUBLICAR_TIKTOK: ${{ vars.PUBLICAR_TIKTOK }}
           TEMA: ${{ github.event.inputs.tema }}
+          AGENDADO: ${{ github.event.inputs.agendado }}
           FORMATO: ${{ needs.decidir.outputs.formato }}
           SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
         run: |
