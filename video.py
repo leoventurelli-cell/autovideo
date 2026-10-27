@@ -126,18 +126,35 @@ def _normalizar_foto(arquivo: Path):
         im.save(arquivo, "JPEG", quality=92)
 
 
+# apelidos que na Wikipédia são outra coisa (ex.: "Lula" em português é o molusco)
+APELIDOS = {"lula": "Luiz Inácio Lula da Silva", "bolsonaro": "Jair Bolsonaro", "jair bolsonaro": "Jair Bolsonaro",
+            "moraes": "Alexandre de Moraes", "xandão": "Alexandre de Moraes", "dilma": "Dilma Rousseff",
+            "fhc": "Fernando Henrique Cardoso", "temer": "Michel Temer", "alckmin": "Geraldo Alckmin",
+            "flávio": "Flávio Bolsonaro", "eduardo bolsonaro": "Eduardo Bolsonaro", "tarcísio": "Tarcísio de Freitas",
+            "trump": "Donald Trump", "milei": "Javier Milei", "pelé": "Pelé", "neymar": "Neymar", "stf": "Supremo Tribunal Federal",
+            "pf": "Polícia Federal (Brasil)", "tse": "Tribunal Superior Eleitoral"}
+# descrição de página que indica que a Wikipédia achou um bicho/planta ou uma página de desambiguação
+NAO_E_ISSO = ("espécie", "género", "gênero", "ordem de", "molusco", "cefalópode", "família de", "species", "genus",
+              "order of", "desambigua", "disambiguation", "página de")
+
+
 def _foto_wikimedia(nome: str, destino: Path) -> bool:
     """Foto real (pessoa, lugar, objeto) da Wikipédia, só se o arquivo estiver no Wikimedia Commons
     (licença livre). Guarda autor e licença em CREDITOS."""
     import html
     import re as _re
+    nome = APELIDOS.get(nome.strip().lower(), nome.strip())
     for lingua in ("pt", "en"):
         try:
             r = requests.get(f"https://{lingua}.wikipedia.org/w/api.php", headers=UA, timeout=30, params={
-                "action": "query", "titles": nome, "prop": "pageimages", "piprop": "original|name",
-                "redirects": 1, "format": "json"}).json()
+                "action": "query", "titles": nome, "prop": "pageimages|pageprops|description",
+                "piprop": "original|name", "redirects": 1, "format": "json"}).json()
             pagina = next(iter(r.get("query", {}).get("pages", {}).values()), {})
             arquivo = pagina.get("pageimage")
+            descricao = str(pagina.get("description", "")).lower()
+            if "disambiguation" in pagina.get("pageprops", {}) or any(p in descricao for p in NAO_E_ISSO):
+                print(f"   '{nome}' na Wikipédia ({lingua}) é outra coisa: {descricao or 'desambiguação'}")
+                continue
             if not arquivo:
                 continue
             info = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
