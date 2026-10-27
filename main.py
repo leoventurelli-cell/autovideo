@@ -204,7 +204,17 @@ def main():
     r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
     r = gerador_roteiro.textos_virais(r, args.formato, tema)
     if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
-        r = gerador_roteiro.revisar_noticia(r, tema)
+        try:
+            r = gerador_roteiro.revisar_noticia(r, tema)
+        except RuntimeError as erro:
+            if args.tema:  # pedido feito à mão: não publica e avisa
+                raise
+            # horário automático: em vez de ficar sem vídeo, troca por um mistério forte
+            print(f"::warning title=Notícia descartada::{erro} Trocando por um tema de mistério.")
+            tema, tendencia = None, None
+            r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
+            r = gerador_roteiro.textos_virais(r, args.formato, None)
+    r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
     if tendencia:
         r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")

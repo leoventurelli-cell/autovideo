@@ -470,6 +470,54 @@ def revisar_noticia(dados: dict, tema: str, _tentativa: int = 1) -> dict:
     return dados
 
 
+PROMPT_CENAS = """Você é editor de imagem de vídeos curtos. A narração abaixo foi dividida em {n} trechos, na ordem.
+Para CADA trecho, escolha a imagem que mostra EXATAMENTE o que está sendo dito naquele momento.
+
+Regras:
+- Pessoa real citada no trecho → 'wiki:' + nome COMPLETO do artigo da Wikipédia (ex: 'wiki:Luiz Inácio Lula da Silva').
+- Lugar, construção, objeto, animal ou evento real citado → 'wiki:' + nome do artigo (ex: 'wiki:Castelo de Edimburgo').
+- Coisa imaginada, lenda, assombração, ET, cena histórica sem foto → 'ia:' + descrição visual em inglês
+  (nunca o rosto de uma pessoa real em 'ia:').
+- Ambiente genérico (céu à noite, floresta, oceano) → termo de busca curto EM INGLÊS para vídeo de banco.
+- Nunca use 'wiki:' para jornais, sites ou empresas; nunca imagem que não tenha a ver com o trecho.
+- Mantenha a cena atual se ela já combina.
+
+Trechos e cenas atuais:
+{trechos}
+
+Responda SOMENTE com JSON: {{"cenas": ["uma cena por trecho, na mesma ordem ({n} itens)"]}}"""
+
+
+def revisar_cenas(dados: dict) -> dict:
+    """Confere cada imagem com o trecho da narração em que ela aparece e troca as que não combinam."""
+    if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
+        return dados
+    pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
+
+    def corrigir(texto: str, cenas: list[str]) -> list[str]:
+        if not cenas:
+            return cenas
+        palavras = texto.split()
+        tam = max(1, len(palavras) // len(cenas))
+        trechos = "\n".join(f"{i + 1}. \"{' '.join(palavras[i * tam:(i + 1) * tam if i < len(cenas) - 1 else None])}\""
+                            f" → cena atual: {c}" for i, c in enumerate(cenas))
+        try:
+            novas = [str(c).strip() for c in pedir(PROMPT_CENAS.format(n=len(cenas), trechos=trechos)).get("cenas", [])]
+        except Exception as erro:
+            print(f"   (revisão das imagens falhou: {erro}; mantendo as cenas)")
+            return cenas
+        return novas if len(novas) == len(cenas) and all(novas) else cenas
+
+    if dados.get("partes"):
+        for p in dados["partes"]:
+            p["cenas"] = corrigir(p["texto"], p["cenas"])
+        dados["cenas"] = [c for p in dados["partes"] for c in p["cenas"]]
+    else:
+        dados["cenas"] = corrigir(dados.get("roteiro", ""), dados.get("cenas", []))
+    print(f"   🖼️  imagens conferidas com a narração: {dados['cenas']}")
+    return dados
+
+
 def textos_virais(dados: dict, formato: str = "curto", tema: str | None = None) -> dict:
     """Gera título, descrição e hashtags otimizados para cada rede e junta em `dados`."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):

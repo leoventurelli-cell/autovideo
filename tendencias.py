@@ -126,7 +126,10 @@ Regras:
 - Nunca atribua mistérios, descobertas ou acontecimentos a empresas, marcas ou pessoas reais.
 - Prefira tendências que rendem curiosidade ou mistério; evite fofoca, futebol puro, ofertas e loterias.
 - PROIBIDO: qualquer notícia com mortos, feridos, vítimas, acidentes, crimes, desastres ou luto (ex.: "casal morre
-  atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, eleição/política partidária.
+  atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, fofoca sobre a vida pessoal.
+- Política, ciência e tecnologia: só entram se for um acontecimento GRANDE do dia, que todo mundo está comentando
+  (ex.: decisão histórica, descoberta científica, lançamento espacial). Nesse caso marque "tipo": "noticia";
+  o vídeo vai ser jornalístico e neutro, só com o que está nas manchetes, sem acusar ninguém.
 - Prefira as notícias de mistério/descoberta/ciência acima; das buscas do Google use só as que já são curiosidade
   (fenômeno no céu, descoberta, lugar misterioso, filme/série de mistério).
 - Sobre o acontecimento de hoje, só afirme o que está nas manchetes; o resto do vídeo é aprofundamento com fatos conhecidos.
@@ -137,7 +140,7 @@ Regras:
   senão responda {{"tema": ""}}.
 
 Responda SOMENTE com JSON:
-{{"curiosidade": 0, "tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
+{{"curiosidade": 0, "tipo": "curiosidade ou noticia", "tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
   "angulo": "1 frase: como ligar a tendência ao nicho", "manchetes": ["manchetes de hoje que embasam o gancho"]}}"""
 
 
@@ -175,7 +178,11 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
         nota = float(dados.get("curiosidade", 0))
     except (TypeError, ValueError):
         nota = 0
-    if nota < 8:
+    noticia = str(dados.get("tipo", "")).lower().startswith("not")
+    if noticia and not dados.get("manchetes"):
+        print("   notícia sem manchetes para conferir; a IA escolhe um mistério forte.")
+        return None
+    if nota < (7 if noticia else 8):
         print(f"   '{dados.get('tema')}' tem pouca curiosidade (nota {nota}); a IA escolhe um mistério forte.")
         return None
     if _tragico(dados.get("tendencia"), dados.get("tema"), dados.get("angulo"), *dados.get("manchetes", [])):
@@ -188,7 +195,12 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
 
 def tema_com_contexto(escolha: dict) -> str:
     """Texto do tema que vai para o roteirista, com o gancho de hoje e as manchetes como base."""
+    noticia = str(escolha.get("tipo", "")).lower().startswith("not")
     partes = [escolha["tema"]]
+    if noticia:  # ativa o modo notícia do roteiro: título neutro + checagem de fatos com as manchetes
+        partes.insert(0, "NOTÍCIA DO DIA, tom jornalístico neutro, sem acusar ninguém e sem afirmar o que não está "
+                         "nas manchetes; use 'segundo' e 'teria' para o que não é confirmado; não cite porcentagens "
+                         "que não estejam nas manchetes. FATOS:")
     if escolha.get("tendencia"):
         partes.append(f"GANCHO: isso está em alta hoje no Brasil ({escolha['tendencia']}); comece ligando o vídeo a isso.")
     if escolha.get("angulo"):
