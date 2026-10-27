@@ -1,6 +1,7 @@
 """Envia o vídeo para o TikTok pela Content Posting API (grátis).
 
-Modo "direto": publica sozinho com título, descrição e hashtags da IA.
+Pelo botão "Postar no TikTok" do painel: post direto com as escolhas do usuário (privacidade, interações,
+divulgação comercial), como o TikTok exige. Envio automático: vai para a caixa de entrada do app.
 Se o app ainda não passou na auditoria do TikTok e a conta é pública,
 o TikTok recusa o post direto; aí o vídeo vai para a caixa de entrada
 do app (você só toca em Publicar e cola a legenda copiada do painel).
@@ -69,7 +70,33 @@ def legenda(roteiro: dict) -> str:
     return texto.strip()[:2200]
 
 
-def _iniciar(cab, arquivo, roteiro, direto: bool):
+def info_do_criador(cab=None) -> dict:
+    """Conta conectada (nome, foto, opções de privacidade e limites) para a tela de postagem do painel.
+    Fica salva em docs/tiktok_conta.json."""
+    import json
+    from datetime import datetime
+    cab = cab or {"Authorization": f"Bearer {_access_token()}", "Content-Type": "application/json; charset=UTF-8"}
+    try:
+        info = _checar(requests.post(f"{API}/post/publish/creator_info/query/", headers=cab, timeout=30))
+        conta = {
+            "apelido": info.get("creator_nickname", ""),
+            "usuario": info.get("creator_username", ""),
+            "foto": info.get("creator_avatar_url", ""),
+            "privacidades": info.get("privacy_level_options", []),
+            "comentario_bloqueado": bool(info.get("comment_disabled")),
+            "dueto_bloqueado": bool(info.get("duet_disabled")),
+            "stitch_bloqueado": bool(info.get("stitch_disabled")),
+            "duracao_maxima": info.get("max_video_post_duration_sec", 0),
+        }
+    except ErroTikTok as e:
+        conta = {"erro": e.codigo}
+    conta["atualizado"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    (config.PASTA / "docs" / "tiktok_conta.json").write_text(json.dumps(conta, ensure_ascii=False, indent=1),
+                                                             encoding="utf-8")
+    return conta
+
+
+def _iniciar(cab, arquivo, roteiro, direto: bool, opcoes: dict | None = None):
     tamanho = os.path.getsize(arquivo)
     pedaco, qtd = _plano_de_pedacos(tamanho)
     origem = {"source": "FILE_UPLOAD", "video_size": tamanho, "chunk_size": pedaco, "total_chunk_count": qtd}
@@ -79,30 +106,38 @@ def _iniciar(cab, arquivo, roteiro, direto: bool):
         return dados, tamanho, pedaco, qtd, None
 
     info = _checar(requests.post(f"{API}/post/publish/creator_info/query/", headers=cab, timeout=30))
-    opcoes = info.get("privacy_level_options", [])
-    privacidade = config.TIKTOK_PRIVACIDADE if config.TIKTOK_PRIVACIDADE in opcoes else (opcoes[0] if opcoes else "SELF_ONLY")
-    corpo = {
-        "post_info": {
-            "title": legenda(roteiro),
+    permitidas = info.get("privacy_level_options", [])
+    if opcoes:  # escolhas feitas pelo usuário na tela "Postar no TikTok" do painel
+        privacidade = opcoes.get("privacidade")
+        if privacidade not in permitidas:
+            raise ErroTikTok("privacidade_invalida", f"'{privacidade}' não é permitido para esta conta: {permitidas}")
+        post_info = {
+            "title": (opcoes.get("legenda") or legenda(roteiro))[:2200],
             "privacy_level": privacidade,
-            "disable_duet": False,
-            "disable_stitch": False,
-            "disable_comment": False,
-            "video_cover_timestamp_ms": 1000,
-            "is_aigc": config.TIKTOK_ROTULO_IA,
-        },
-        "source_info": origem,
-    }
+            "disable_comment": not opcoes.get("comentar") or bool(info.get("comment_disabled")),
+            "disable_duet": not opcoes.get("dueto") or bool(info.get("duet_disabled")),
+            "disable_stitch": not opcoes.get("stitch") or bool(info.get("stitch_disabled")),
+            "brand_organic_toggle": bool(opcoes.get("marca_propria")),
+            "brand_content_toggle": bool(opcoes.get("conteudo_de_marca")),
+        }
+    else:
+        privacidade = config.TIKTOK_PRIVACIDADE if config.TIKTOK_PRIVACIDADE in permitidas else (permitidas[0] if permitidas else "SELF_ONLY")
+        post_info = {"title": legenda(roteiro), "privacy_level": privacidade,
+                     "disable_duet": False, "disable_stitch": False, "disable_comment": False}
+    post_info.update({"video_cover_timestamp_ms": 1000, "is_aigc": config.TIKTOK_ROTULO_IA})
+    corpo = {"post_info": post_info, "source_info": origem}
     dados = _checar(requests.post(f"{API}/post/publish/video/init/", headers=cab, json=corpo, timeout=30))
     return dados, tamanho, pedaco, qtd, privacidade
 
 
-def publicar(arquivo, roteiro: dict) -> str:
+def publicar(arquivo, roteiro: dict, opcoes: dict | None = None) -> str:
+    """opcoes: escolhas da tela "Postar no TikTok" do painel (privacidade, interações, divulgação comercial,
+    legenda). Com elas o post é direto; sem elas vale o TIKTOK_MODO (envio automático vai para a caixa de entrada)."""
     cab = {"Authorization": f"Bearer {_access_token()}", "Content-Type": "application/json; charset=UTF-8"}
 
-    direto = config.TIKTOK_MODO == "direto"
+    direto = bool(opcoes) or config.TIKTOK_MODO == "direto"
     try:
-        dados, tamanho, pedaco, qtd, privacidade = _iniciar(cab, arquivo, roteiro, direto)
+        dados, tamanho, pedaco, qtd, privacidade = _iniciar(cab, arquivo, roteiro, direto, opcoes)
     except ErroTikTok as e:
         if not direto or e.codigo not in (
             "unaudited_client_can_only_post_to_private_accounts", "scope_not_authorized", "access_token_invalid_scope",
@@ -152,6 +187,7 @@ def publicar(arquivo, roteiro: dict) -> str:
     print(f"::notice title=TikTok::{estado} (publish_id {publish_id})")
 
     if direto:
-        visibilidade = "público" if privacidade == "PUBLIC_TO_EVERYONE" else f"visibilidade {privacidade}"
+        visibilidade = {"PUBLIC_TO_EVERYONE": "público", "MUTUAL_FOLLOW_FRIENDS": "só amigos",
+                        "FOLLOWER_OF_CREATOR": "só seguidores", "SELF_ONLY": "só eu"}.get(privacidade, privacidade)
         return f"publicado direto com título e descrição ({visibilidade})"
     return "na caixa de entrada do app TikTok: toque em Publicar e cole a legenda copiada do painel"

@@ -36,5 +36,6 @@ jobs:
           git config user.name "autovideo-bot"
           git config user.email "autovideo-bot@users.noreply.github.com"
           git add tiktok.token docs/config.json
+          [ -e docs/tiktok_conta.json ] && git add docs/tiktok_conta.json
           git commit -m "TikTok conectado"
           git pull --rebase && git push

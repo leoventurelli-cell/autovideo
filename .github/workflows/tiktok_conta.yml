@@ -1,0 +1,33 @@
+name: Conta do TikTok
+
+# Atualiza a conta mostrada na tela "Postar no TikTok" do painel (nome, foto e opções de privacidade).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 10 * * *"   # todo dia, de manhã
+
+permissions:
+  contents: write
+
+jobs:
+  conta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências
+        run: pip install requests cryptography
+      - name: Ler a conta
+        env:
+          TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY || secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+        run: python -c "import publicar_tiktok, json; print(json.dumps(publicar_tiktok.info_do_criador(), ensure_ascii=False))"
+      - name: Salvar no painel
+        run: |
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          git add docs/tiktok_conta.json tiktok.token
+          git diff --cached --quiet || (git commit -m "conta do TikTok" && git pull --rebase && git push)

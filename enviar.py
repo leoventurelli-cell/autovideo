@@ -82,8 +82,10 @@ def enviar(v: dict, videos: list[dict], redes: list[str], pasta: Path) -> bool:
                 import publicar_youtube
                 v[rede] = publicar_youtube.publicar(arquivo, r, formato, None, capa)
             else:
+                import os
                 import publicar_tiktok
-                v[rede] = publicar_tiktok.publicar(arquivo, r)
+                opcoes = json.loads(os.environ["TIKTOK_OPCOES"]) if os.getenv("TIKTOK_OPCOES", "").strip() else None
+                v[rede] = publicar_tiktok.publicar(arquivo, r, opcoes)
             print(f"   {rede}: {v[rede]}")
         except Exception:
             traceback.print_exc()
@@ -106,6 +108,12 @@ def main():
 
     pasta = Path(tempfile.mkdtemp())
     ok = enviar(v, videos, redes, pasta)
+    if "tiktok" in redes:
+        try:  # atualiza a conta mostrada na tela "Postar no TikTok"
+            import publicar_tiktok
+            publicar_tiktok.info_do_criador()
+        except Exception as erro:
+            print(f"   (não consegui atualizar a conta do TikTok: {erro})")
 
     # Vídeo longo foi pro YouTube → manda junto o Short de chamada com o link
     if v.get("formato") == "longo" and str(v.get("youtube", "")).startswith("http"):

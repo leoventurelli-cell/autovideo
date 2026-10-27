@@ -96,6 +96,30 @@
   .chave .lin{display:flex;gap:8px;flex-wrap:wrap}
   .chave input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--borda);color:var(--texto);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px}
   @media(max-width:640px){.acoes,.redes{grid-template-columns:1fr}}
+  /* tela "Postar no TikTok" (segue as regras de conteúdo do TikTok) */
+  .fundo-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:24px 16px}
+  .fundo-modal.on{display:flex}
+  .modal{background:var(--card);border:1px solid var(--borda);border-radius:20px;max-width:560px;width:100%;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .modal h2{margin:0;font-size:20px}
+  .modal .conta{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--fraco)}
+  .modal .conta img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--card2)}
+  .modal .conta b{color:var(--texto)}
+  .modal .previa{display:flex;gap:14px}
+  .modal .previa video{width:150px;aspect-ratio:9/16;border-radius:12px;background:#000;flex:none;object-fit:cover}
+  .modal textarea{flex:1;min-height:150px;background:var(--bg);border:1px solid var(--borda);color:var(--texto);border-radius:12px;padding:10px;font:inherit;font-size:13px;resize:vertical}
+  .modal label.rot{font-size:13px;font-weight:600}
+  .modal select{width:100%;background:var(--bg);border:1px solid var(--borda);color:var(--texto);border-radius:12px;padding:12px;font:inherit;font-size:14px}
+  .modal .opcoes{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
+  .modal .opcoes label{display:flex;align-items:center;gap:6px}
+  .modal .opcoes label.off{opacity:.45}
+  .modal .bloco{background:var(--card2);border-radius:14px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+  .modal .bloco small{color:var(--fraco);line-height:1.5}
+  .modal .declara{font-size:12px;color:var(--fraco);line-height:1.6}
+  .modal .declara a{color:var(--texto)}
+  .modal .rodape{display:flex;gap:10px;justify-content:flex-end}
+  .modal .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.tt{background:#000;color:#fff;border:1px solid #333}
+  @media(max-width:520px){.modal .previa{flex-direction:column}.modal .previa video{width:100%;max-width:220px;align-self:center}}
 </style>
 </head>
 <body>
@@ -154,7 +178,7 @@
   <div class="redes">
     <div class="rede">
       <div><b>TikTok</b> <span class="pill" id="tt-status">não conectado</span></div>
-      <small>Publica direto com o título, a descrição e as hashtags da IA. Enquanto o TikTok não aprovar seu app, o vídeo cai na caixa de entrada do app e você só toca em Publicar.</small>
+      <small>Em cada Short, <b>🎵 Postar no TikTok</b> abre a tela de postagem: você confere a legenda, escolhe quem pode ver e posta. Enquanto o TikTok não aprovar o app, o vídeo vai para a caixa de entrada do app.</small>
       <button class="btn rosa" id="tt-conectar" onclick="conectarTikTok()">Conectar TikTok</button>
     </div>
     <div class="rede">
@@ -176,6 +200,43 @@
     <a href="privacidade.html">Política de privacidade</a>
   </div>
 </main>
+<div class="fundo-modal" id="tt-modal" onclick="if(event.target===this)fecharTikTok()">
+  <div class="modal" role="dialog" aria-labelledby="tt-titulo">
+    <h2 id="tt-titulo">Postar no TikTok</h2>
+    <div class="conta" id="tt-conta">Carregando a conta…</div>
+    <div class="previa">
+      <video id="tt-video" controls playsinline preload="metadata"></video>
+      <textarea id="tt-legenda" maxlength="2200" aria-label="Legenda" placeholder="Escreva a legenda"></textarea>
+    </div>
+    <div>
+      <label class="rot" for="tt-privacidade">Quem pode ver este vídeo</label>
+      <select id="tt-privacidade" onchange="validarTikTok()"><option value="" disabled selected>Escolha…</option></select>
+    </div>
+    <div>
+      <div class="rot" style="font-size:13px;font-weight:600;margin-bottom:6px">Permitir que outras pessoas</div>
+      <div class="opcoes">
+        <label id="lb-comentar"><input type="checkbox" id="tt-comentar"> Comentem</label>
+        <label id="lb-dueto"><input type="checkbox" id="tt-dueto"> Façam Dueto</label>
+        <label id="lb-stitch"><input type="checkbox" id="tt-stitch"> Façam Stitch</label>
+      </div>
+    </div>
+    <div class="bloco">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="tt-comercial" onchange="validarTikTok()"> Divulgar conteúdo comercial</label>
+      <small>Marque se este vídeo promove você, uma marca, um produto ou um serviço.</small>
+      <div id="tt-comercial-opcoes" style="display:none;flex-direction:column;gap:6px">
+        <label><input type="checkbox" id="tt-marca-propria" onchange="validarTikTok()"> <b>Sua marca</b>: você está promovendo você ou o seu próprio negócio</label>
+        <label><input type="checkbox" id="tt-conteudo-marca" onchange="validarTikTok()"> <b>Conteúdo de marca</b>: você está promovendo outra marca ou um terceiro</label>
+        <small id="tt-aviso-comercial"></small>
+      </div>
+    </div>
+    <div class="declara" id="tt-declara"></div>
+    <div class="dica" id="tt-processa" style="margin:0">Depois de postar, o TikTok pode levar alguns minutos para processar o vídeo e mostrá-lo no seu perfil.</div>
+    <div class="rodape">
+      <button class="btn" type="button" onclick="fecharTikTok()">Cancelar</button>
+      <button class="btn rosa" type="button" id="tt-postar" onclick="postarTikTok()" disabled>Postar no TikTok</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast">Copiado!</div>
 
 <script>
@@ -508,6 +569,7 @@
           ${blocoTextos(v, i)}
           <div class="botoes">
             ${v.mp4 ? `<a class="btn amarelo largo" href="${esc(v.mp4)}" download>⬇ Baixar vídeo</a>` : ''}
+            ${v.mp4 && v.formato !== 'longo' ? `<button class="btn tt largo" onclick="abrirTikTok(${i})">🎵 Postar no TikTok</button>` : ''}
             ${v.mp4 && v.formato !== 'longo' ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank">Abrir TikTok Studio ↗</a>` : ''}
             ${v.mp4 ? `<button class="btn yt largo" onclick="enviarVideo(${i},'youtube')">📤 Enviar no YouTube${v.formato === 'longo' ? ' (+ Short)' : ''}</button>` : ''}
             ${v.mp4 && v.formato !== 'longo' ? `<button class="btn ambos largo" onclick="enviarVideo(${i},'ambos')">🚀 Enviar em ambos (YouTube + TikTok)</button>` : ''}
@@ -516,6 +578,72 @@
       </article>`).join('');
   });
   }
+  // ───────── Postar no TikTok: o usuário escolhe tudo antes (regras de conteúdo do TikTok) ─────────
+  const NOMES_PRIV = {PUBLIC_TO_EVERYONE: 'Todos', MUTUAL_FOLLOW_FRIENDS: 'Amigos', FOLLOWER_OF_CREATOR: 'Seguidores', SELF_ONLY: 'Só eu'};
+  let ttConta = {}, ttVideo = null;
+  async function abrirTikTok(i){
+    ttVideo = window._videos[i];
+    const t = textosDe(ttVideo);
+    $('tt-video').src = ttVideo.mp4;
+    $('tt-legenda').value = [t.legenda_tiktok, t.hashtags_tiktok].filter(Boolean).join('\n\n');
+    ['tt-comentar','tt-dueto','tt-stitch','tt-comercial','tt-marca-propria','tt-conteudo-marca'].forEach(id => $(id).checked = false);
+    $('tt-modal').classList.add('on');
+    try { ttConta = await (await fetch('tiktok_conta.json?' + Date.now(), {cache: 'no-store'})).json(); } catch { ttConta = {}; }
+    const sel = $('tt-privacidade');
+    sel.innerHTML = '<option value="" disabled selected>Escolha…</option>' +
+      (ttConta.privacidades || []).map(p => `<option value="${esc(p)}">${esc(NOMES_PRIV[p] || p)}</option>`).join('');
+    if (ttConta.apelido) {
+      $('tt-conta').innerHTML = `${ttConta.foto ? `<img src="${esc(ttConta.foto)}" alt="">` : ''}<span>Postando como <b>${esc(ttConta.apelido)}</b>${ttConta.usuario ? ' (@' + esc(ttConta.usuario) + ')' : ''}</span>`;
+    } else {
+      $('tt-conta').innerHTML = ttConta.erro
+        ? `⚠️ O TikTok não liberou a leitura da conta (${esc(ttConta.erro)}). Reconecte o TikTok.`
+        : '⚠️ Conta ainda não carregada. Reconecte o TikTok para aparecer aqui.';
+    }
+    for (const [k, id] of [['comentario_bloqueado','comentar'],['dueto_bloqueado','dueto'],['stitch_bloqueado','stitch']]) {
+      $('tt-' + id).disabled = !!ttConta[k];
+      $('lb-' + id).classList.toggle('off', !!ttConta[k]);
+      $('lb-' + id).title = ttConta[k] ? 'Desativado nas configurações da sua conta do TikTok' : '';
+    }
+    const limite = ttConta.duracao_maxima || 0;
+    $('tt-processa').textContent = limite && ttVideo.segundos > limite
+      ? `⚠️ Este vídeo tem ${ttVideo.segundos}s e a sua conta aceita até ${limite}s.`
+      : 'Depois de postar, o TikTok pode levar alguns minutos para processar o vídeo e mostrá-lo no seu perfil.';
+    validarTikTok();
+  }
+  function fecharTikTok(){ $('tt-modal').classList.remove('on'); $('tt-video').pause(); }
+  function validarTikTok(){
+    const comercial = $('tt-comercial').checked, marca = $('tt-marca-propria').checked, terceiro = $('tt-conteudo-marca').checked;
+    $('tt-comercial-opcoes').style.display = comercial ? 'flex' : 'none';
+    const sel = $('tt-privacidade');
+    const soEu = [...sel.options].find(o => o.value === 'SELF_ONLY');
+    if (soEu) { soEu.disabled = comercial && terceiro; soEu.textContent = soEu.disabled ? 'Só eu (indisponível para conteúdo de marca)' : 'Só eu'; }
+    if (comercial && terceiro && sel.value === 'SELF_ONLY') sel.value = '';
+    const musica = '<a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank">Confirmação de Uso de Música</a>';
+    const marcaLink = '<a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank">Política de Conteúdo de Marca</a>';
+    $('tt-declara').innerHTML = `Ao postar, você concorda com a ${terceiro && comercial ? marcaLink + ' e a ' : ''}${musica} do TikTok.`;
+    $('tt-aviso-comercial').textContent = !comercial ? '' : terceiro ? 'O vídeo será marcado como "Parceria paga".'
+      : marca ? 'O vídeo será marcado como "Conteúdo promocional".' : 'Escolha pelo menos uma opção acima.';
+    const okComercial = !comercial || marca || terceiro;
+    $('tt-postar').disabled = !sel.value || !okComercial || !ttConta.apelido;
+    $('tt-postar').title = !ttConta.apelido ? 'Conecte o TikTok primeiro' : !sel.value ? 'Escolha quem pode ver o vídeo'
+      : !okComercial ? 'Escolha o tipo de conteúdo comercial' : '';
+  }
+  function postarTikTok(){
+    const comercial = $('tt-comercial').checked;
+    const opcoes = {
+      privacidade: $('tt-privacidade').value, legenda: $('tt-legenda').value,
+      comentar: $('tt-comentar').checked, dueto: $('tt-dueto').checked, stitch: $('tt-stitch').checked,
+      marca_propria: comercial && $('tt-marca-propria').checked, conteudo_de_marca: comercial && $('tt-conteudo-marca').checked,
+    };
+    const v = ttVideo, rotulo = `Postando no TikTok: ${v.titulo}`;
+    fecharTikTok();
+    if (chave()) { disparar('enviar.yml', {id: idDe(v), redes: 'tiktok', tiktok: JSON.stringify(opcoes)}, rotulo, 'enviar'); return; }
+    window.open(`${base}/issues/new?` + new URLSearchParams({title: `[tiktok] ${idDe(v)}`, body: JSON.stringify(opcoes)}), '_blank');
+    toast('Clique em Create na página que abriu');
+    acompanhar({wf: 'enviar.yml', t0: Date.now(), rotulo, tipo: 'enviar'});
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharTikTok(); });
+
   carregar().then(() => {  // continua acompanhando se a página foi recarregada no meio
     let a = null; try { a = JSON.parse(localStorage.getItem('av_acomp') || 'null'); } catch {}
     if (a && Date.now() - a.t0 < 3 * 3600 * 1000) { acompanhar(a); return; }

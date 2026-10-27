@@ -12,6 +12,10 @@ on:
         type: choice
         options: [youtube, tiktok, ambos]
         default: youtube
+      tiktok:
+        description: "Escolhas da tela 'Postar no TikTok' (JSON; vazio = caixa de entrada)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -47,6 +51,7 @@ jobs:
           TIKTOK_MODO: ${{ vars.TIKTOK_MODO }}
           ID: ${{ github.event.inputs.id }}
           REDES: ${{ github.event.inputs.redes }}
+          TIKTOK_OPCOES: ${{ github.event.inputs.tiktok }}
         run: python enviar.py --id "$ID" --redes "$REDES"
 
       - name: Atualizar painel
@@ -54,7 +59,7 @@ jobs:
         run: |
           git config user.name "autovideo-bot"
           git config user.email "autovideo-bot@users.noreply.github.com"
-          for f in docs/videos.json tiktok.token youtube.token; do
+          for f in docs/videos.json docs/tiktok_conta.json tiktok.token youtube.token; do
             [ -e "$f" ] && git add "$f"
           done
           git diff --cached --quiet || (git commit -m "vídeo enviado" && git pull --rebase && git push)

@@ -69,5 +69,11 @@ escopos = dados.get("scope", "")
 print("✅ TikTok conectado!")
 print(f"   Permissões: {escopos}")
 print(f"   A conexão vale {int(dados.get('refresh_expires_in', 0)) // 86400} dias e se renova a cada vídeo publicado.")
+try:
+    import publicar_tiktok
+    conta = publicar_tiktok.info_do_criador()
+    print(f"   Conta: {conta.get('apelido') or conta}")
+except Exception as erro:
+    print(f"   (não consegui ler a conta: {erro})")
 if "video.publish" not in escopos:
     print("   ⚠️  Faltou a permissão video.publish: ative 'Direct Post' na Content Posting API do seu app.")

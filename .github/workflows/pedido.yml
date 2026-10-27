@@ -20,6 +20,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TITULO: ${{ github.event.issue.title }}
+          CORPO: ${{ github.event.issue.body }}
           NUMERO: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -31,6 +32,14 @@ jobs:
             gh issue edit "$NUMERO" -R "$REPO" --title "[conectar:$REDE] código recebido"
             gh workflow run "conectar_$REDE.yml" -R "$REPO" -f codigo="$CODIGO"
             gh issue comment "$NUMERO" -R "$REPO" --body "🔗 Conectando o **$REDE**... em 1 minuto o painel mostra \"conectado\"."
+            gh issue close "$NUMERO" -R "$REPO"
+            exit 0 ;;
+          esac
+          # [tiktok] ID  → post direto com as escolhas da tela "Postar no TikTok" (JSON no corpo do pedido)
+          case "$TITULO" in "[tiktok]"*)
+            ID=$(printf '%s' "$TITULO" | sed -E 's/^\[[^]]+\][[:space:]]*//')
+            gh workflow run enviar.yml -R "$REPO" -f id="$ID" -f redes=tiktok -f tiktok="$CORPO"
+            gh issue comment "$NUMERO" -R "$REPO" --body "🎵 Postando o vídeo **$ID** no TikTok com as suas escolhas. Em alguns minutos o painel mostra o resultado."
             gh issue close "$NUMERO" -R "$REPO"
             exit 0 ;;
           esac
