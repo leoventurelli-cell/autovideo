@@ -34,7 +34,7 @@ Responda SOMENTE com um JSON neste formato:
   "roteiro": "texto completo da narração",
   "descricao": "descrição de 2 ou 3 frases para o post",
   "hashtags": ["#exemplo", "#outra", "#shorts"],
-  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'); use SEMPRE o nome COMPLETO do artigo, nunca apelido (ex: 'wiki:Luiz Inácio Lula da Silva', nunca 'wiki:Lula', que é o molusco); não use 'wiki:' para jornais, sites ou empresas. As marcas 'wiki:'/'ia:' vão SÓ aqui em cenas, NUNCA no roteiro falado. Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Se o vídeo é sobre ETs, OVNIs, naves ou criaturas, pelo menos METADE das cenas deve ser 'ia:' mostrando o ser/a nave descritos no roteiro, e a cidade/lugar real do caso deve aparecer como 'wiki:' (ex: 'wiki:Varginha'). Evite pessoas em escritório, reuniões, finanças e casa"]
+  "cenas": ["{cenas} termos de busca EM INGLÊS para vídeos de banco, um por cena, na ordem da narração: o objeto/lugar LITERAL falado naquele trecho (ex: 'radio telescope', 'ancient pyramid'). Se a cena mostra uma PESSOA famosa, LUGAR ou OBJETO real específico, escreva 'wiki:' + nome do artigo da Wikipédia (ex: 'wiki:Pelé', 'wiki:USS Nimitz', 'wiki:Stonehenge'); use SEMPRE o nome COMPLETO do artigo, nunca apelido (ex: 'wiki:Luiz Inácio Lula da Silva', nunca 'wiki:Lula', que é o molusco); não use 'wiki:' para jornais, sites ou empresas. As marcas 'wiki:'/'ia:' vão SÓ aqui em cenas, NUNCA no roteiro falado. Se mostra algo imaginado ou que não existe em vídeo real (ET, nave alienígena, criatura, cena histórica recriada), escreva 'ia:' + descrição visual em inglês (ex: 'ia:grey alien standing in a dark forest at night'). Se o vídeo é sobre ETs, OVNIs, naves ou criaturas, pelo menos METADE das cenas deve ser 'ia:' mostrando o ser/a nave descritos no roteiro, e a cidade/lugar real do caso deve aparecer como 'wiki:' (ex: 'wiki:Varginha'). Lugares mal-assombrados, abandonados ou misteriosos: o lugar real como 'wiki:' (ex: 'wiki:Castelo de Edimburgo', 'wiki:Isla de las Muñecas') e o clima da lenda como 'ia:' (ex: 'ia:dark abandoned hospital corridor with a faint shadow figure'), nunca rosto de pessoa real em 'ia:'. Evite pessoas em escritório, reuniões, finanças e casa"]
 }}"""
 
 EXEMPLO = {
@@ -192,6 +192,32 @@ def limpar_narracao(texto: str) -> str:
     return re.sub(r"\s+([,.!?])", r"\1", t).strip()
 
 
+# Quando nada do que está em alta serve, o canal usa estes temas que mais despertam curiosidade
+# (um por vez, em rodízio diário, para variar).
+CATEGORIAS_CURIOSAS = [
+    "lugares mal-assombrados reais e famosos (no Brasil ou no mundo) e a história documentada por trás das lendas",
+    "desaparecimentos e casos reais que nunca foram resolvidos",
+    "cidades, hospitais, hotéis ou parques abandonados e o que aconteceu ali",
+    "objetos amaldiçoados ou enigmáticos guardados em museus",
+    "sons, sinais e fenômenos estranhos registrados por cientistas e ainda sem explicação completa",
+    "descobertas arqueológicas que mudaram o que se sabia da história",
+    "lugares proibidos ou inacessíveis ao público e por quê",
+    "lendas e criaturas famosas que nasceram de fatos reais",
+    "mistérios do fundo do mar e das profundezas",
+    "OVNIs e casos investigados oficialmente por governos ou forças armadas",
+    "construções antigas que até hoje intrigam engenheiros e historiadores",
+    "acontecimentos bizarros e reais da história do Brasil",
+]
+
+
+def tema_curioso(formato: str = "curto") -> str:
+    from datetime import date
+    i = (date.today().toordinal() * 2 + (formato == "longo")) % len(CATEGORIAS_CURIOSAS)
+    return (f"Escolha UM caso real, específico e documentado desta categoria: {CATEGORIAS_CURIOSAS[i]}. "
+            "Prefira o que gera MUITA curiosidade (a pessoa precisa querer ver o final), com nome, lugar e data, "
+            "e que tenha fotos reais do lugar ou do objeto.")
+
+
 def gerar(tema: str | None, usados: list[str]) -> dict:
     """Retorna dict com assunto, titulo, roteiro, descricao, hashtags e cenas."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
@@ -201,7 +227,7 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
     segundos = config.DURACAO_ALVO_SEGUNDOS
     prompt = PROMPT.format(
         nicho=config.NICHO,
-        tema_linha=f"Tema obrigatório deste vídeo: {tema}" if tema else "Escolha você um assunto que viralize.",
+        tema_linha=f"Tema obrigatório deste vídeo: {tema}" if tema else tema_curioso("curto"),
         usados=", ".join(usados[-60:]) or "nenhum",
         idioma=config.IDIOMA,
         segundos=segundos,
@@ -257,7 +283,7 @@ Responda SOMENTE com um JSON neste formato:
   "descricao": "descrição de 3 a 5 frases para o YouTube, com palavras-chave",
   "hashtags": ["#curiosidades", "#outra", "#outra"],
   "partes": [
-    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 cenas desta parte: termo de busca EM INGLÊS com o objeto/lugar LITERAL (ex: 'deep ocean'); 'wiki:Nome completo do artigo' para pessoa/lugar/objeto real famoso (ex: 'wiki:Pelé', 'wiki:Luiz Inácio Lula da Silva', nunca apelido como 'wiki:Lula'); 'ia:descrição em inglês' para coisas imaginadas (ET, nave, criatura) — em vídeos de ETs/OVNIs, pelo menos metade das cenas 'ia:'. Evite escritório, reuniões e finanças"]}}
+    {{"titulo": "Introdução", "texto": "narração completa desta parte", "cenas": ["4 a 6 cenas desta parte: termo de busca EM INGLÊS com o objeto/lugar LITERAL (ex: 'deep ocean'); 'wiki:Nome completo do artigo' para pessoa/lugar/objeto real famoso (ex: 'wiki:Pelé', 'wiki:Luiz Inácio Lula da Silva', nunca apelido como 'wiki:Lula'); 'ia:descrição em inglês' para coisas imaginadas (ET, nave, criatura, assombração) — em vídeos de ETs/OVNIs, pelo menos metade das cenas 'ia:'; em lugares mal-assombrados, o lugar real como 'wiki:' e o clima da lenda como 'ia:'. Evite escritório, reuniões e finanças"]}}
   ]
 }}"""
 
@@ -275,7 +301,7 @@ def gerar_longo(tema: str | None, usados: list[str]) -> dict:
     partes_meio = max(4, min(10, minutos))
     prompt = PROMPT_LONGO.format(
         nicho=config.NICHO,
-        tema_linha=f"Tema obrigatório deste vídeo: {tema}" if tema else "Escolha você um assunto com muito potencial de busca no YouTube.",
+        tema_linha=f"Tema obrigatório deste vídeo: {tema}" if tema else tema_curioso("longo"),
         usados=", ".join(usados[-60:]) or "nenhum",
         idioma=config.IDIOMA,
         minutos=minutos,

@@ -48,9 +48,13 @@ def google_trends(limite: int = 25) -> list[dict]:
     return []
 
 
-NOTICIAS_MISTERIO = ("https://news.google.com/rss/search?q=" +
-                     "mist%C3%A9rio+OR+descoberta+OR+arque%C3%B3logos+OR+cientistas+OR+enigma+OR+inexplic%C3%A1vel+OR+NASA"
-                     "+when:3d&hl=pt-BR&gl=BR&ceid=BR:pt-419")
+_GN = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q="
+NOTICIAS_MISTERIO = [  # notícias dos últimos 3 dias que já nascem curiosas
+    _GN + "mist%C3%A9rio+OR+enigma+OR+inexplic%C3%A1vel+OR+%22sem+explica%C3%A7%C3%A3o%22+when:3d",
+    _GN + "mal-assombrado+OR+assombra%C3%A7%C3%A3o+OR+fantasma+OR+%22lugar+abandonado%22+when:3d",
+    _GN + "arque%C3%B3logos+OR+%22descoberta+rara%22+OR+%22cientistas+descobrem%22+OR+f%C3%B3ssil+when:3d",
+    _GN + "OVNI+OR+%22fen%C3%B4meno+estranho%22+OR+%22luzes+no+c%C3%A9u%22+OR+NASA+when:3d",
+]
 
 # palavras de notícia com vítima/tragédia/crime: essas tendências NUNCA viram vídeo
 TRAGEDIA = ("morre", "morreu", "morte", "mortes", "morto", "mortos", "morta", "mata ", "matou", "vítima", "vitima",
@@ -66,14 +70,15 @@ def _tragico(*textos) -> bool:
 
 def noticias_de_misterio(limite: int = 20) -> list[str]:
     """Manchetes recentes (3 dias) de descobertas, mistérios e ciência no Google Notícias Brasil."""
-    try:
-        r = requests.get(NOTICIAS_MISTERIO, headers=CAB, timeout=30)
-        r.raise_for_status()
-        titulos = [(i.findtext("title") or "").strip() for i in ET.fromstring(r.content).iter("item")]
-    except Exception as erro:
-        print(f"   Google Notícias indisponível ({erro})")
-        return []
-    return [t for t in titulos if t and not _tragico(t)][:limite]
+    titulos = []
+    for url in NOTICIAS_MISTERIO:
+        try:
+            r = requests.get(url, headers=CAB, timeout=30)
+            r.raise_for_status()
+            titulos += [(i.findtext("title") or "").strip() for i in ET.fromstring(r.content).iter("item")][:8]
+        except Exception as erro:
+            print(f"   Google Notícias indisponível ({erro})")
+    return [t for t in dict.fromkeys(titulos) if t and not _tragico(t)][:limite]
 
 
 def youtube_em_alta(limite: int = 25) -> list[str]:
@@ -127,8 +132,12 @@ Regras:
 - Sobre o acontecimento de hoje, só afirme o que está nas manchetes; o resto do vídeo é aprofundamento com fatos conhecidos.
 - Se nenhuma tendência servir, responda {{"tema": ""}}.
 
+- Dê uma nota de 0 a 10 para o quanto o tema desperta CURIOSIDADE (vontade de assistir até o fim para saber
+  a resposta). Notícia comum, esporte, economia ou celebridade = nota baixa. Só sugira temas com nota 8 ou mais;
+  senão responda {{"tema": ""}}.
+
 Responda SOMENTE com JSON:
-{{"tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
+{{"curiosidade": 0, "tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
   "angulo": "1 frase: como ligar a tendência ao nicho", "manchetes": ["manchetes de hoje que embasam o gancho"]}}"""
 
 
@@ -161,6 +170,13 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
         return None
     if not str(dados.get("tema", "")).strip():
         print("   nenhuma tendência de hoje combinou com o canal; a IA escolhe o tema sozinha.")
+        return None
+    try:
+        nota = float(dados.get("curiosidade", 0))
+    except (TypeError, ValueError):
+        nota = 0
+    if nota < 8:
+        print(f"   '{dados.get('tema')}' tem pouca curiosidade (nota {nota}); a IA escolhe um mistério forte.")
         return None
     if _tragico(dados.get("tendencia"), dados.get("tema"), dados.get("angulo"), *dados.get("manchetes", [])):
         print(f"   🚫 '{dados.get('tendencia')}' envolve tragédia/vítimas; a IA escolhe um mistério clássico.")

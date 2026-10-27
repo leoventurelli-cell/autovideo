@@ -110,7 +110,8 @@ def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) 
 
 
 IMAGINARIOS = (" alien", "ufo", "spaceship", "space ship", "spacecraft", "flying saucer", "extraterrestrial",
-               "creature", "monster", "ghost", "humanoid", " et ", "mothership", "abduction", "cryptid")
+               "creature", "monster", "ghost", "humanoid", " et ", "mothership", "abduction", "cryptid",
+               "haunted", "apparition", "spirit ", "shadow figure", "poltergeist", "demon", "possessed", "phantom")
 CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
 UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
