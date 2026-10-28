@@ -415,7 +415,8 @@ Responda SOMENTE com o mesmo JSON corrigido (mesmas chaves e o mesmo número de 
 # em notícia sobre pessoa real, estes termos acusam (ou inventam crime) e não podem ir ao ar
 PROIBIDAS_NOTICIA = ("identidade falsa", "documento falso", "documentos falsos", "passaporte falso", "fugiu", "fuga de",
                      "foragido", "fugitivo", "criminoso", "culpado", "desaparecido", "escondido", "escondendo",
-                     "cura milagrosa", "cura garantida", "cura definitiva", "milagre", "remédio caseiro que cura")
+                     "cura milagrosa", "cura garantida", "cura definitiva", "milagre", "remédio caseiro que cura",
+                     "traiu", "traição", "amante", "drogado", "bêbado", "viciado")
 
 
 def _proibidas(dados: dict) -> list[str]:

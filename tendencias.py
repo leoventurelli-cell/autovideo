@@ -127,11 +127,15 @@ Regras:
   nunca uma associação forçada. Ex. ruim: em alta "operadora fechou acordo com Starlink" → "sinais misteriosos
   captados pela Starlink" (isso é inventado). Se a ligação for fraca, responda {{"tema": ""}}.
 - Nunca atribua mistérios, descobertas ou acontecimentos a empresas, marcas ou pessoas reais.
-- Prefira tendências que rendem curiosidade ou mistério; evite fofoca, futebol puro, ofertas e loterias.
+- Prefira tendências que rendem curiosidade ou mistério; evite futebol puro, ofertas e loterias.
 - NUNCA transforme em "mistério" assuntos do dia a dia: falta de luz/água/internet, chuva e previsão do tempo,
   trânsito, preços, salário, INSS, Pix, concursos, programas de TV. Isso não é curiosidade, é serviço.
 - PROIBIDO: qualquer notícia com mortos, feridos, vítimas, acidentes, crimes, desastres ou luto (ex.: "casal morre
-  atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, fofoca sobre a vida pessoal.
+  atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, menores de idade, pessoas comuns
+  (não famosas), vida sexual, traição ou boato sem fonte.
+- FOFOCA de famosos que todo mundo está comentando VALE, se estiver nas manchetes de veículos conhecidos
+  (ex.: término, casamento, briga pública, polêmica, revelação de um famoso): marque "tipo": "noticia"; o vídeo
+  conta só o que as manchetes dizem, com "segundo", sem julgar nem inventar detalhes.
 - Política, ciência e tecnologia: só entram se for um acontecimento GRANDE do dia, que todo mundo está comentando
   (ex.: decisão histórica, descoberta científica, lançamento espacial). Nesse caso marque "tipo": "noticia";
   o vídeo vai ser jornalístico e neutro, só com o que está nas manchetes, sem acusar ninguém.
@@ -143,7 +147,7 @@ Regras:
 - Se nenhuma tendência servir, responda {{"tema": ""}}.
 
 - Dê uma nota de 0 a 10 para o quanto o tema desperta CURIOSIDADE (vontade de assistir até o fim para saber
-  a resposta). Notícia comum, esporte, economia ou celebridade = nota baixa. Só sugira temas com nota 8 ou mais;
+  a resposta). Notícia comum, esporte ou economia = nota baixa; fofoca bombando com fonte pode ter nota alta. Só sugira temas com nota 8 ou mais;
   senão responda {{"tema": ""}}.
 
 Responda SOMENTE com JSON:
@@ -190,7 +194,7 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
         print("   notícia sem manchetes para conferir; a IA escolhe um mistério forte.")
         return None
     cotidiano = r"apag[ãa]o|falta de (luz|energia|[áa]gua)|energia el[ée]trica|previs[ãa]o do tempo|chuva|temporal|" \
-                r"tr[âa]nsito|pre[çc]o|sal[áa]rio|inss|pix|concurso|enem|loteria|mega-sena|bbb|novela"
+                r"tr[âa]nsito|pre[çc]o|sal[áa]rio|inss|pix|concurso|enem|loteria|mega-sena"
     if re.search(cotidiano, f"{dados.get('tendencia', '')} {dados.get('tema', '')}", re.I):
         print(f"   '{dados.get('tema')}' é assunto do dia a dia, não curiosidade; a IA escolhe um mistério forte.")
         return None
