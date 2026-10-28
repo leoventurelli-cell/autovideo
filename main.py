@@ -237,7 +237,7 @@ def main():
             r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
             r = gerador_roteiro.textos_virais(r, args.formato, None)
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
-    if gerador_roteiro.modo_noticia(tema):
+    if gerador_roteiro.modo_noticia(tema) and "ILUSTRAÇÃO DE IA" not in tema.upper():
         r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
     if tema and "MÚSICA DE PERIGO" in tema.upper():
         r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
