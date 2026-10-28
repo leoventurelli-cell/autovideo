@@ -66,9 +66,27 @@ TRAGEDIA = ("morre", "morreu", "morte", "mortes", "morto", "mortos", "morta", "m
             "afogad", "atropel", "facada", "esfaque", "corpo encontrado", "óbito", "falece", "chacina", "violência")
 
 
+# morte de famoso por causa natural pode virar HOMENAGEM; estas palavras indicam morte violenta, crime,
+# acidente ou suicídio, e aí nunca vira vídeo
+VIOLENTO = ("mata ", "matou", "assassin", "homicíd", "acidente", "ferido", "feridos", "desaparecid", "estupr",
+            "sequestr", "baleado", "tiroteio", "crime", "preso ", "presa ", "suicíd", "afogad", "atropel", "facada",
+            "esfaque", "corpo encontrado", "chacina", "violência", "overdose", "vítimas", "tragédia", "tragedia",
+            "queda de avião", "incêndio", "desabamento", "enchente", "deslizamento")
+
+
 def _tragico(*textos) -> bool:
     t = " ".join(str(x) for x in textos).lower() + " "
     return any(p in t for p in TRAGEDIA)
+
+
+def _violento(*textos) -> bool:
+    t = " ".join(str(x) for x in textos).lower() + " "
+    return any(p in t for p in VIOLENTO)
+
+
+def _sem_violencia(*textos) -> bool:
+    """Passa no filtro de entrada: tragédia com violência nunca; morte simples fica para a IA avaliar homenagem."""
+    return not _violento(*textos)
 
 
 def noticias_de_misterio(limite: int = 20) -> list[str]:
@@ -81,7 +99,7 @@ def noticias_de_misterio(limite: int = 20) -> list[str]:
             titulos += [(i.findtext("title") or "").strip() for i in ET.fromstring(r.content).iter("item")][:8]
         except Exception as erro:
             print(f"   Google Notícias indisponível ({erro})")
-    return [t for t in dict.fromkeys(titulos) if t and not _tragico(t)][:limite]
+    return [t for t in dict.fromkeys(titulos) if t and _sem_violencia(t)][:limite]
 
 
 def youtube_em_alta(limite: int = 25) -> list[str]:
@@ -133,6 +151,9 @@ Regras:
 - PROIBIDO: qualquer notícia com mortos, feridos, vítimas, acidentes, crimes, desastres ou luto (ex.: "casal morre
   atingido por raio" NÃO serve, nem com outro ângulo), saúde de pessoas reais, menores de idade, pessoas comuns
   (não famosas), vida sexual, traição ou boato sem fonte.
+- MORTE DE FAMOSO (artista, atleta, figura pública) confirmada nas manchetes VALE como homenagem, contando a
+  história e as conquistas dele: marque "tipo": "homenagem". NÃO vale se foi morte violenta, crime, acidente,
+  suicídio ou overdose, nem para vítimas de desastres.
 - FOFOCA de famosos que todo mundo está comentando VALE, se estiver nas manchetes de veículos conhecidos
   (ex.: término, casamento, briga pública, polêmica, revelação de um famoso): marque "tipo": "noticia"; o vídeo
   conta só o que as manchetes dizem, com "segundo", sem julgar nem inventar detalhes.
@@ -151,7 +172,7 @@ Regras:
   senão responda {{"tema": ""}}.
 
 Responda SOMENTE com JSON:
-{{"curiosidade": 0, "tipo": "curiosidade ou noticia", "tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
+{{"curiosidade": 0, "tipo": "curiosidade, noticia ou homenagem", "tendencia": "a busca/vídeo em alta escolhido", "tema": "tema do vídeo, específico e curioso (até 90 caracteres)",
   "angulo": "1 frase: como ligar a tendência ao nicho", "manchetes": ["manchetes de hoje que embasam o gancho"]}}"""
 
 
@@ -159,8 +180,8 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
     """Escolhe o tema do dia a partir das tendências. Retorna {'tema','tendencia','angulo','manchetes'} ou None."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
         return None
-    google = [g for g in google_trends() if not _tragico(g["busca"], *g["manchetes"])]
-    youtube = [t for t in youtube_em_alta() if not _tragico(t)]
+    google = [g for g in google_trends() if _sem_violencia(g["busca"], *g["manchetes"])]
+    youtube = [t for t in youtube_em_alta() if _sem_violencia(t)]
     noticias = noticias_de_misterio()
     if not google and not youtube and not noticias:
         print("   ⚠️ não consegui ler as tendências de hoje; a IA escolhe o tema sozinha.")
@@ -189,7 +210,8 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
         nota = float(dados.get("curiosidade", 0))
     except (TypeError, ValueError):
         nota = 0
-    noticia = str(dados.get("tipo", "")).lower().startswith("not")
+    homenagem = str(dados.get("tipo", "")).lower().startswith("homen")
+    noticia = homenagem or str(dados.get("tipo", "")).lower().startswith("not")
     if noticia and not dados.get("manchetes"):
         print("   notícia sem manchetes para conferir; a IA escolhe um mistério forte.")
         return None
@@ -201,7 +223,11 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
     if nota < (7 if noticia else 9):
         print(f"   '{dados.get('tema')}' tem pouca curiosidade (nota {nota}); a IA escolhe um mistério forte.")
         return None
-    if _tragico(dados.get("tendencia"), dados.get("tema"), dados.get("angulo"), *dados.get("manchetes", [])):
+    tudo = (dados.get("tendencia"), dados.get("tema"), dados.get("angulo"), *dados.get("manchetes", []))
+    if homenagem and _violento(*tudo):
+        print(f"   🚫 '{dados.get('tendencia')}': morte violenta, acidente ou crime não vira homenagem.")
+        return None
+    if not homenagem and _tragico(*tudo):
         print(f"   🚫 '{dados.get('tendencia')}' envolve tragédia/vítimas; a IA escolhe um mistério clássico.")
         return None
     dados["manchetes"] = [str(m) for m in dados.get("manchetes", []) if str(m).strip()][:4]
@@ -211,8 +237,15 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
 
 def tema_com_contexto(escolha: dict) -> str:
     """Texto do tema que vai para o roteirista, com o gancho de hoje e as manchetes como base."""
-    noticia = str(escolha.get("tipo", "")).lower().startswith("not")
+    homenagem = str(escolha.get("tipo", "")).lower().startswith("homen")
+    noticia = homenagem or str(escolha.get("tipo", "")).lower().startswith("not")
     partes = [escolha["tema"]]
+    if homenagem:
+        partes.append("HOMENAGEM, tom respeitoso e emocionante: conte a trajetória, as obras e as conquistas da "
+                      "pessoa (fatos públicos e amplamente conhecidos da carreira podem ser usados). Sobre a morte, "
+                      "só diga o que está nas manchetes (data e idade); a causa só se for natural e estiver nas "
+                      "manchetes, sem detalhes. Nada de sensacionalismo, 'mistério' ou especulação. Termine com uma "
+                      "mensagem de homenagem e peça para o público deixar uma lembrança nos comentários.")
     if noticia and re.search(r"tratament|vacina|terapia|medic|doen|c[âa]ncer|sa[úu]de|rem[ée]dio|cura|estudo", " ".join(
             [escolha.get("tema", ""), escolha.get("tendencia", "") or "", *escolha.get("manchetes", [])]), re.I):
         partes.append("SAÚDE: diga em que fase está (estudo em laboratório, em animais, testes em pessoas ou já "
