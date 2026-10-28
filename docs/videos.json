@@ -533,6 +533,7 @@
   "tiktok": "na caixa de entrada do app TikTok: toque em Publicar e cole a legenda copiada do painel",
   "id": "video-20261028-1141-42",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261028-1141-42/otzi-o-misterio-do-machado-de-cobre.mp4",
-  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40707869237"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/40707869237",
+  "celular": "tiktok/video-20261028-1141-42.mp4"
  }
 ]
