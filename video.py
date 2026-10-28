@@ -391,6 +391,32 @@ def _plano_longo(roteiro: dict, inicios: list[float], total: float) -> list[tupl
     return plano
 
 
+def _trilha_perigo(destino: Path, segundos: float) -> Path | None:
+    """Trilha de suspense feita na hora pelo FFmpeg (sem direito autoral): zumbido grave,
+    vento escuro, batida de coração e um agudo que vai e volta."""
+    import subprocess
+    d = f"{max(20.0, segundos):.1f}"
+    fim = float(d) - 3
+    entradas = ["-f", "lavfi", "-i", f"sine=f=55:d={d}", "-f", "lavfi", "-i", f"sine=f=58.3:d={d}",
+                "-f", "lavfi", "-i", f"sine=f=110.5:d={d}", "-f", "lavfi", "-i", f"anoisesrc=d={d}:c=brown:a=0.25",
+                "-f", "lavfi", "-i", "aevalsrc='0.9*sin(2*PI*48*t)*exp(-18*mod(t,0.85))+0.6*sin(2*PI*44*t)"
+                f"*exp(-22*mod(t-0.22,0.85))*gte(mod(t,0.85),0.22)':d={d}",
+                "-f", "lavfi", "-i", f"aevalsrc='0.18*sin(2*PI*(880+40*sin(2*PI*0.3*t))*t)*(0.5+0.5*sin(2*PI*0.125*t))':d={d}"]
+    filtro = ("[0][1][2]amix=inputs=3:normalize=0,volume=0.35,tremolo=f=0.5:d=0.4[drone];"
+              "[3]lowpass=f=300,volume=0.6[wind];[4]lowpass=f=150,volume=0.9[heart];"
+              "[5]highpass=f=600,volume=0.5,aecho=0.8:0.7:400:0.4[str];"
+              f"[drone][wind][heart][str]amix=inputs=4:normalize=0,afade=t=in:d=2,afade=t=out:st={fim:.1f}:d=3,"
+              "loudnorm=I=-16,aformat=channel_layouts=stereo:sample_rates=44100")
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *entradas, "-filter_complex", filtro, "-b:a", "96k",
+                        str(destino)], check=True, timeout=300)
+        print("   🎵 trilha de perigo pronta")
+        return destino
+    except Exception as erro:
+        print(f"   ⚠️  trilha de perigo falhou: {erro}")
+        return None
+
+
 def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
            formato: str = "curto", inicios_partes: list[float] | None = None) -> Path:
     usar_formato(formato)
@@ -428,12 +454,17 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
     print("🎧 Juntando tudo...")
     final = pasta / "video_final.mp4"
     musicas = sorted(config.PASTA_MUSICA.glob("*.mp3"))
+    volume_musica = config.VOLUME_MUSICA
+    if roteiro.get("musica") == "perigo":  # trilha de tensão pedida no tema
+        trilha = _trilha_perigo(pasta / "trilha_perigo.mp3", total + 2)
+        if trilha:
+            musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.22)
     entradas = ["-f", "concat", "-safe", "0", "-i", lista, "-i", audio]
     if musicas:
         entradas += ["-stream_loop", "-1", "-i", random.choice(musicas)]
         audio_filtro = (
             f"[1:a]apad=pad_dur={CAUDA}[voz];"
-            f"[2:a]volume={config.VOLUME_MUSICA},afade=t=out:st={total - 1.5:.2f}:d=1.5[mus];"
+            f"[2:a]volume={volume_musica},afade=t=out:st={total - 1.5:.2f}:d=1.5[mus];"
             "[voz][mus]amix=inputs=2:duration=first:normalize=0[a0]"
         )
     else:

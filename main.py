@@ -239,6 +239,8 @@ def main():
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
     if gerador_roteiro.modo_noticia(tema):
         r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
+    if tema and "MÚSICA DE PERIGO" in tema.upper():
+        r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
     if tendencia:
         r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")
