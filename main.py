@@ -117,6 +117,28 @@ def textos_da_chamada(rc: dict) -> dict:
     }
 
 
+PASTA_CELULAR = config.PASTA / "docs" / "tiktok"  # cópia leve dos Shorts, servida pelo próprio painel
+
+
+def copia_para_celular(arquivo, nome: str, manter: int = 6) -> str | None:
+    """Cópia leve (720p) do Short dentro do painel: no celular, o botão "Mandar pro TikTok" passa esse
+    arquivo direto para o app do TikTok (o link do GitHub não deixa o navegador pegar o arquivo)."""
+    import subprocess
+    try:
+        PASTA_CELULAR.mkdir(parents=True, exist_ok=True)
+        destino = PASTA_CELULAR / f"{nome}.mp4"
+        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(arquivo),
+                        "-vf", "scale=720:-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+                        "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(destino)],
+                       check=True, timeout=600)
+        for velho in sorted(PASTA_CELULAR.glob("*.mp4"), key=lambda p: p.stat().st_mtime)[:-manter]:
+            velho.unlink()  # só os mais recentes ficam no painel (os outros continuam no GitHub)
+        return f"tiktok/{destino.name}"
+    except Exception as erro:
+        print(f"   (não consegui fazer a cópia para o celular: {erro})")
+        return None
+
+
 def _automatico() -> bool:
     return os.getenv("GITHUB_EVENT_NAME") == "schedule" or os.getenv("AGENDADO") == "sim"
 
@@ -255,6 +277,9 @@ def main():
             print("::warning title=Short::Não consegui criar o Short de chamada; o vídeo longo segue normal.")
     mp4, capa_url = _preparar_download(r, destino, capa, [chamada] if chamada else [])
     chamada_url = _url_release(r["_tag"], chamada) if chamada and r.get("_tag") else None
+    nome = r.get("_tag") or _slug(r["titulo"])
+    celular = None if longo else copia_para_celular(destino, nome)
+    celular_chamada = copia_para_celular(chamada, f"{nome}-short") if chamada else None
 
     if not args.manter_arquivos:
         for lixo in list(pasta.glob("clipe_*.mp4")) + list(pasta.glob("cena_*.mp4")) + [pasta / "cenas.txt"]:
@@ -264,10 +289,13 @@ def main():
     _salvar_historico(historico)
 
     def registrar(resultados_longo: dict, resultados_chamada: dict):
-        _registrar_no_painel(r, resultados_longo, mp4, segundos, args.formato, capa_url, capitulos)
+        _registrar_no_painel(r, resultados_longo, mp4, segundos, args.formato, capa_url, capitulos,
+                             extra={"celular": celular} if celular else None)
         if chamada:
             rc = roteiro_da_chamada(r, resultados_longo.get("youtube"))
             extra = {"chamada_de": r.get("_tag"), "id": f"{r.get('_tag')}-short"}
+            if celular_chamada:
+                extra["celular"] = celular_chamada
             _registrar_no_painel({**rc, "_tag": None}, resultados_chamada, chamada_url,
                                  video.duracao(chamada), "curto", None, None, textos_da_chamada(rc), extra)
 

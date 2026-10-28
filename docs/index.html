@@ -119,6 +119,14 @@
   .modal .rodape{display:flex;gap:10px;justify-content:flex-end}
   .modal .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
   .btn.tt{background:#000;color:#fff;border:1px solid #333}
+  /* mandar pro TikTok pelo celular */
+  .folha{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--borda);border-radius:20px 20px 0 0;padding:18px 16px 26px;z-index:60;transform:translateY(110%);transition:transform .25s;max-width:560px;margin:0 auto;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+  .folha.on{transform:none}
+  .folha b.t{font-size:17px;display:block;margin-bottom:6px}
+  .folha .msg{font-size:14px;color:var(--fraco);line-height:1.6;margin-bottom:12px}
+  .folha ol{font-size:13px;color:var(--fraco);margin:12px 0 0 18px;line-height:1.8}
+  .folha .lin{display:flex;gap:10px}
+  .folha .lin .btn{flex:1}
   @media(max-width:520px){.modal .previa{flex-direction:column}.modal .previa video{width:100%;max-width:220px;align-self:center}}
 </style>
 </head>
@@ -236,6 +244,20 @@
       <button class="btn rosa" type="button" id="tt-postar" onclick="postarTikTok()" disabled>Postar no TikTok</button>
     </div>
   </div>
+</div>
+<div class="folha" id="cel" role="dialog" aria-labelledby="cel-t">
+  <b class="t" id="cel-t">📲 Mandar pro TikTok</b>
+  <div class="msg" id="cel-msg">Preparando…</div>
+  <div class="lin">
+    <button class="btn" type="button" onclick="$('cel').classList.remove('on')">Fechar</button>
+    <button class="btn rosa" type="button" id="cel-ir" onclick="abrirTikTokCel()" disabled>Abrir no TikTok</button>
+  </div>
+  <ol>
+    <li>Toque em <b>Abrir no TikTok</b> e escolha <b>TikTok</b> na lista.</li>
+    <li>No TikTok, toque em <b>Avançar</b>.</li>
+    <li>Segure o dedo na descrição → <b>Colar</b> (a legenda já está copiada).</li>
+    <li>Em <b>Mais opções</b>, ligue <b>Conteúdo gerado por IA</b> → <b>Publicar</b>.</li>
+  </ol>
 </div>
 <div class="toast" id="toast">Copiado!</div>
 
@@ -569,6 +591,8 @@
           ${blocoTextos(v, i)}
           <div class="botoes">
             ${v.mp4 ? `<a class="btn amarelo largo" href="${esc(v.mp4)}" download>⬇ Baixar vídeo</a>` : ''}
+            ${v.celular ? `<button class="btn rosa largo" onclick="mandarCelular(${i})">📲 Mandar pro TikTok (celular)</button>`
+              : v.mp4 && v.formato !== 'longo' ? `<button class="btn largo" onclick="prepararCelular(${i})">📲 Preparar pro celular</button>` : ''}
             ${v.mp4 && v.formato !== 'longo' ? `<button class="btn tt largo" onclick="abrirTikTok(${i})">🎵 Postar no TikTok</button>` : ''}
             ${v.mp4 && v.formato !== 'longo' ? `<a class="btn rosa largo" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank">Abrir TikTok Studio ↗</a>` : ''}
             ${v.mp4 ? `<button class="btn yt largo" onclick="enviarVideo(${i},'youtube')">📤 Enviar no YouTube${v.formato === 'longo' ? ' (+ Short)' : ''}</button>` : ''}
@@ -643,6 +667,36 @@
     acompanhar({wf: 'enviar.yml', t0: Date.now(), rotulo, tipo: 'enviar'});
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharTikTok(); });
+
+  // ───────── celular: passa o vídeo direto para o app do TikTok (legenda vai copiada) ─────────
+  let celArq = null;
+  async function mandarCelular(i){
+    const v = window._videos[i], t = textosDe(v);
+    copiar([t.legenda_tiktok, t.hashtags_tiktok].filter(Boolean).join('\n\n'));
+    celArq = null;
+    $('cel').classList.add('on'); $('cel-ir').disabled = true;
+    $('cel-msg').innerHTML = '✓ Legenda copiada<br>⏳ Preparando o vídeo…';
+    try {
+      const b = await (await fetch(v.celular, {cache: 'force-cache'})).blob();
+      celArq = new File([b], (idDe(v) || 'video') + '.mp4', {type: 'video/mp4'});
+      if (navigator.canShare && navigator.canShare({files: [celArq]})) {
+        $('cel-msg').innerHTML = '✓ Legenda copiada<br>✓ Vídeo pronto'; $('cel-ir').disabled = false;
+      } else {
+        $('cel-msg').innerHTML = '✓ Legenda copiada<br>⚠️ Este navegador não manda vídeo para apps. Abra o painel no celular (Chrome no Android ou Safari no iPhone), ou use <b>⬇ Baixar</b>.';
+      }
+    } catch (e) { $('cel-msg').textContent = 'Não consegui carregar o vídeo (' + e.message + '). Use ⬇ Baixar.'; }
+  }
+  async function abrirTikTokCel(){
+    try { await navigator.share({files: [celArq]}); $('cel').classList.remove('on'); }
+    catch (e) { if (e.name !== 'AbortError') toast('Não abriu: ' + e.message); }
+  }
+  function prepararCelular(i){
+    const v = window._videos[i], rotulo = `Preparando para o celular: ${v.titulo}`;
+    if (chave()) { disparar('celular.yml', {id: idDe(v)}, rotulo, 'enviar'); return; }
+    window.open(`${base}/issues/new?` + new URLSearchParams({title: `[celular] ${idDe(v)}`, body: 'Preparar este Short para o botão do celular. É só clicar em Create.'}), '_blank');
+    toast('Clique em Create na página que abriu');
+    acompanhar({wf: 'celular.yml', t0: Date.now(), rotulo, tipo: 'enviar'});
+  }
 
   carregar().then(() => {  // continua acompanhando se a página foi recarregada no meio
     let a = null; try { a = JSON.parse(localStorage.getItem('av_acomp') || 'null'); } catch {}

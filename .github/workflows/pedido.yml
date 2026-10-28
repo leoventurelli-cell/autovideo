@@ -35,6 +35,14 @@ jobs:
             gh issue close "$NUMERO" -R "$REPO"
             exit 0 ;;
           esac
+          # [celular] ID  → prepara a cópia leve do Short para o botão do celular
+          case "$TITULO" in "[celular]"*)
+            ID=$(printf '%s' "$TITULO" | sed -E 's/^\[[^]]+\][[:space:]]*//')
+            gh workflow run celular.yml -R "$REPO" -f id="$ID"
+            gh issue comment "$NUMERO" -R "$REPO" --body "📲 Preparando o vídeo **$ID** para o celular. Em 1 ou 2 minutos aparece o botão no painel."
+            gh issue close "$NUMERO" -R "$REPO"
+            exit 0 ;;
+          esac
           # [tiktok] ID  → post direto com as escolhas da tela "Postar no TikTok" (JSON no corpo do pedido)
           case "$TITULO" in "[tiktok]"*)
             ID=$(printf '%s' "$TITULO" | sed -E 's/^\[[^]]+\][[:space:]]*//')

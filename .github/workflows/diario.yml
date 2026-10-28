@@ -182,4 +182,5 @@ jobs:
           for f in historico.json temas.txt docs/videos.json docs/config.json docs/sugestoes.json tiktok.token youtube.token; do
             [ -e "$f" ] && git add "$f"
           done
+          [ -d docs/tiktok ] && git add -A docs/tiktok  # cópias leves dos Shorts para o celular
           git diff --cached --quiet || (git commit -m "novo vídeo" && git pull --rebase && git push)
