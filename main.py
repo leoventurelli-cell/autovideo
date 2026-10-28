@@ -239,6 +239,10 @@ def main():
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
     if gerador_roteiro.modo_noticia(tema) and "ILUSTRAÇÃO DE IA" not in tema.upper():
         r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
+    fixas = re.search(r"CENAS FIXAS:\s*(.+)$", tema or "", re.S)
+    if fixas and not longo:  # pedido manual com as imagens exatas, na ordem (separadas por |)
+        r["cenas"] = [c.strip(" .") for c in fixas.group(1).split("|") if c.strip(" .")][:12] or r["cenas"]
+        print(f"   🖼️  cenas fixas do pedido: {r['cenas']}")
     if tema and "MÚSICA DE PERIGO" in tema.upper():
         r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
     if tendencia:
