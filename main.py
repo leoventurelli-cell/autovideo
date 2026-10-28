@@ -237,6 +237,8 @@ def main():
             r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
             r = gerador_roteiro.textos_virais(r, args.formato, None)
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
+    if gerador_roteiro.modo_noticia(tema):
+        r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
     if tendencia:
         r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")

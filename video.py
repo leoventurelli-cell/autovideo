@@ -180,12 +180,14 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
     return False
 
 
-def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
+def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict[str, Path | None]:
     """Uma mídia por termo (sem repetir termos):
        'wiki:Nome'  → foto real da Wikimedia (pessoas, lugares, objetos famosos)
        'ia:cena'    → imagem gerada por IA (ET, nave, criaturas, cenas imaginadas)
        outro termo  → vídeo do Pexels; se nada combinar, imagem de IA da mesma cena.
-    Termo sem nada vira None (fundo animado)."""
+    Termo sem nada vira None (fundo animado).
+    so_reais=True (notícia): só fotos reais da Wikimedia; o resto repete uma delas
+    (nada de banco de vídeo genérico, que mostrava bandeira e urna de outro país)."""
     unicos = list(dict.fromkeys(cenas))
     usados, clipes = set(), {}
     for i, termo in enumerate(unicos):
@@ -200,6 +202,10 @@ def baixar_clipes(cenas: list[str], pasta: Path) -> dict[str, Path | None]:
                 print(f"   🖼️  foto real {i + 1}/{len(unicos)}: '{valor}'")
                 continue
             tipo = "ia"  # sem foto livre: desenha a cena
+        if so_reais:
+            clipes[termo] = None  # notícia: depois repete uma foto real que deu certo
+            print(f"   ↺ '{termo}' (notícia: só foto real)")
+            continue
         if tipo == "ia" or not config.PEXELS_API_KEY:
             img = pasta / f"clipe_{i}.jpg"
             if _imagem_ia(f"{valor}, realistic cinematic photo, vertical composition" if P["orientacao"] == "portrait"
@@ -399,7 +405,7 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         titulos = [(0.05, gancho)] if gancho else None
 
     print(f"🎬 Baixando clipes ({len(set(t for t, _ in plano))} temas, {len(plano)} cenas)...")
-    clipes = baixar_clipes([t for t, _ in plano], pasta)
+    clipes = baixar_clipes([t for t, _ in plano], pasta, so_reais=bool(roteiro.get("so_fotos_reais")))
 
     print("✂️  Preparando cenas...")
     lista = pasta / "cenas.txt"
