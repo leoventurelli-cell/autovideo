@@ -17,14 +17,22 @@ Escreva UM roteiro em {idioma} para narração de cerca de {segundos} segundos
 (aproximadamente {palavras} palavras).
 
 Regras do roteiro:
-- A primeira frase é um gancho forte que prende nos 2 primeiros segundos.
-- Frases curtas e diretas, linguagem falada, sem emojis, sem hashtags, sem "olá pessoal".
+RETENÇÃO (é o que faz o algoritmo do YouTube e do TikTok espalhar o vídeo):
+- 1ª frase (até 10 palavras) = o fato mais chocante ou uma pergunta impossível de ignorar. Comece direto no
+  assunto: nada de "você sabia", "olá", "hoje vamos falar" nem apresentação.
+- Nos primeiros 5 segundos, prometa uma revelação que só vem no fim (ex.: "e o detalhe mais estranho ficou para o
+  final"); e cumpra essa promessa no fim, de verdade.
+- Uma informação nova a cada 3 a 5 segundos; no meio, um mini-gancho ("mas aí aconteceu algo que ninguém esperava").
+- A última frase deve emendar com a primeira, para o vídeo recomeçar naturalmente quando repetir (replay conta muito).
+- Termine com UMA pergunta específica e fácil de responder nos comentários (ex.: "Você passaria uma noite lá?").
+  Nunca peça inscrição no começo.
+- Frases curtas e diretas (até 12 palavras), linguagem falada, sem emojis, sem hashtags.
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
 - Nunca atribua acontecimentos, descobertas ou falas a empresas, marcas ou pessoas reais se isso não for amplamente conhecido ou não estiver nas manchetes dadas.
 - Mistérios: só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
 - Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
 - Ciência e medicina: diga em que fase está a pesquisa (laboratório, animais, testes em pessoas, aprovado); nunca prometa cura, nunca indique remédio ou dose; se for saúde, termine lembrando de procurar um médico.
-- Termine com uma frase curta que convide a seguir o canal ou comentar.
+- Depois da pergunta final, no máximo uma frase curtinha convidando a seguir o canal.
 - Não escreva indicações de cena, só o texto que será narrado.
 - O roteiro PRECISA ter pelo menos {palavras} palavras: desenvolva com 3 a 5 fatos, exemplos e detalhes curiosos.
 
@@ -270,10 +278,13 @@ Escreva o roteiro de UM vídeo em {idioma} de cerca de {minutos} minutos de narr
 (no total, NO MÍNIMO {palavras} palavras), no formato de lista/top ou de história em capítulos.
 
 Estrutura obrigatória:
-- Parte 1 = introdução: gancho forte nos primeiros 10 segundos, diga o que a pessoa vai descobrir e peça para se inscrever no canal.
+- Parte 1 = introdução: comece direto pelo momento mais impressionante da história (nada de "olá" ou
+  apresentação), em até 15 segundos diga o que a pessoa vai descobrir e prometa uma revelação para o final;
+  só depois disso, em uma frase, peça para se inscrever.
+- Termine cada parte com um gancho para a próxima, para ninguém sair no meio (a retenção decide o alcance).
 - Partes do meio: {partes_meio} partes, cada uma com um subtítulo e de {por_parte} palavras,
   com fatos verdadeiros, exemplos e curiosidades (números só se tiver certeza absoluta; em notícia, só os do pedido). Faça transições que prendam ("mas o mais estranho ainda está por vir").
-- Última parte = conclusão curta + pergunta para comentarem + convite para se inscrever.
+- Última parte = cumpra a revelação prometida + uma pergunta específica para comentarem + convite para se inscrever.
 
 Regras: linguagem falada, frases curtas, sem emojis, sem indicações de cena, só fatos verdadeiros e verificáveis.
 Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números.
@@ -367,7 +378,7 @@ Responda SOMENTE com um JSON:
   "legenda_tiktok": "1ª linha = gancho curto que provoca (até 80 caracteres, pode ter 1 emoji); 2ª linha = pergunta que incentive comentários; sem hashtags aqui",
   "hashtags_tiktok": ["5 a 7 hashtags: 2 amplas (ex: #curiosidades #fyp), 3 do assunto específico, 1 do nicho em português"],
   "hashtags_youtube": ["3 a 5 hashtags relevantes"],
-  "texto_capa": "frase da thumbnail: 2 a 4 palavras de impacto em português, ligadas ao tema concreto do vídeo (ex: 'A ILHA PROIBIDA', '8 DESAFIOS DO BRASIL'); nunca 'segredo'",
+  "texto_capa": "frase da thumbnail e do gancho na tela nos 3 primeiros segundos: 2 a 5 palavras de impacto em português, ligadas ao tema concreto do vídeo (ex: 'A ILHA PROIBIDA', 'NINGUÉM VOLTOU DESSE LUGAR'); nunca 'segredo'",
   "prompt_capa": "descrição EM INGLÊS de UMA cena cinematográfica e chamativa para a thumbnail deste vídeo (o objeto/lugar principal do tema, em close, iluminação dramática), sem texto",
   "titulo_short": "título de um Short de 1 minuto que divulga este vídeo (até 55 caracteres, provoca curiosidade, palavra-chave no início)",
   "tags_youtube": ["10 a 15 palavras-chave de busca em português, do específico ao amplo"]

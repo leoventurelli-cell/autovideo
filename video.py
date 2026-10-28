@@ -281,7 +281,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     linhas = []
     for inicio, titulo in titulos or []:
-        linhas.append(f"Dialogue: 1,{_tempo_ass(inicio)},{_tempo_ass(inicio + 3.5)},Titulo,,0,0,0,,"
+        margem = 330 if H > W else 0  # no Short, abaixo da barra do topo do TikTok/YouTube
+        linhas.append(f"Dialogue: 1,{_tempo_ass(inicio)},{_tempo_ass(inicio + 3.5)},Titulo,,0,0,{margem},,"
                       f"{{\\fad(250,300)}}{_limpo(titulo).upper()}")
     for grupo in _grupos_de_palavras(palavras, maximo=P["palavras_por_vez"]):
         textos = [_limpo(p["texto"]).upper() for p in grupo]
@@ -393,7 +394,9 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         titulos = [(ini + 0.2, p["titulo"]) for p, ini in zip(roteiro["partes"], inicios_partes)][1:]
     else:
         plano = _plano_curto(roteiro, palavras, total)
-        titulos = None
+        # gancho escrito na tela nos primeiros segundos: quem passa o dedo lê antes mesmo de ouvir
+        gancho = str(roteiro.get("texto_capa") or "").strip()
+        titulos = [(0.05, gancho)] if gancho else None
 
     print(f"🎬 Baixando clipes ({len(set(t for t, _ in plano))} temas, {len(plano)} cenas)...")
     clipes = baixar_clipes([t for t, _ in plano], pasta)
