@@ -4,9 +4,9 @@ on:
   schedule:
     # O GitHub costuma atrasar (e às vezes pula) os horários agendados. Por isso o sistema
     # "acorda" a cada 20 minutos e o passo "decidir" vê se já passou da hora e se o vídeo
-    # do dia ainda não saiu: Short a partir das 11:47 e vídeo longo a partir das 18:17 (Brasília).
+    # do dia ainda não saiu: Short a partir das 09:00 e vídeo longo a partir das 18:00 (Brasília).
     # Quando não há nada a fazer, a execução termina em segundos.
-    - cron: "7,27,47 14-23 * * *"
+    - cron: "7,27,47 12-23 * * *"
     - cron: "7,27 0-2 * * *"
   workflow_dispatch:   # botão "Run workflow" para rodar na hora
     inputs:
@@ -47,8 +47,8 @@ jobs:
           EVENTO: ${{ github.event_name }}
           FORMATO_PEDIDO: ${{ github.event.inputs.formato }}
           AGENDADO: ${{ github.event.inputs.agendado }}
-          HORA_SHORT: "11:47"
-          HORA_LONGO: "18:17"
+          HORA_SHORT: "09:00"
+          HORA_LONGO: "18:00"
         run: |
           python3 - <<'PY'
           import json, os

@@ -3,12 +3,12 @@ name: Relógio (vídeos na hora certa)
 # O agendamento do GitHub atrasa horas (ou pula). Este relógio fica acordado esperando o horário
 # exato e então dispara o "Vídeo diário". Ao terminar, ele mesmo agenda o próximo (corrente sem fim).
 # Os horários abaixo são alguns minutos ANTES da publicação, que é o tempo de gerar o vídeo:
-#   11:38 → Short sai ~11:47      18:02 → vídeo longo + Short saem ~18:17
+#   08:51 → Short sai ~09:00      17:45 → vídeo longo + Short saem ~18:00
 # Os dois "cron" só servem para religar a corrente caso ela caia algum dia.
 on:
   schedule:
-    - cron: "13 9 * * *"    # ~06:13 Brasília
-    - cron: "43 16 * * *"   # ~13:43 Brasília
+    - cron: "13 8 * * *"    # ~05:13 Brasília
+    - cron: "43 15 * * *"   # ~12:43 Brasília
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
           import os, subprocess, time
           from datetime import datetime, timedelta, timezone
           BR = timezone(timedelta(hours=-3))
-          DISPAROS = [(11, 38), (18, 2)]
+          DISPAROS = [(8, 51), (17, 45)]
           agora = datetime.now(BR)
           proximos = [(agora + timedelta(days=d)).replace(hour=h, minute=m, second=0, microsecond=0)
                       for d in (0, 1) for h, m in DISPAROS]
