@@ -160,7 +160,7 @@ jobs:
           YT_PRIVACIDADE: ${{ vars.YT_PRIVACIDADE }}
           TIKTOK_MODO: ${{ vars.TIKTOK_MODO }}
           PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
-          PUBLICAR_TIKTOK: ${{ vars.PUBLICAR_TIKTOK }}
+          PUBLICAR_TIKTOK: "sim"  # Shorts vão para a caixa de entrada do TikTok; o usuário só toca em Publicar
           TEMA: ${{ github.event.inputs.tema }}
           AGENDADO: ${{ github.event.inputs.agendado }}
           FORMATO: ${{ needs.decidir.outputs.formato }}
