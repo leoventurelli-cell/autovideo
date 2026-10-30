@@ -134,9 +134,12 @@ APELIDOS = {"lula": "Luiz Inácio Lula da Silva", "bolsonaro": "Jair Bolsonaro",
             "flávio": "Flávio Bolsonaro", "eduardo bolsonaro": "Eduardo Bolsonaro", "tarcísio": "Tarcísio de Freitas",
             "trump": "Donald Trump", "milei": "Javier Milei", "pelé": "Pelé", "neymar": "Neymar", "stf": "Supremo Tribunal Federal",
             "pf": "Polícia Federal (Brasil)", "tse": "Tribunal Superior Eleitoral"}
-# descrição de página que indica que a Wikipédia achou um bicho/planta ou uma página de desambiguação
-NAO_E_ISSO = ("espécie", "género", "gênero", "ordem de", "molusco", "cefalópode", "família de", "species", "genus",
-              "order of", "desambigua", "disambiguation", "página de")
+# página de desambiguação (o nome serve pra várias coisas): não usa
+NAO_E_ISSO = ("desambigua", "disambiguation", "página de")
+# bicho/planta: só é engano quando o pedido era uma PESSOA (ex.: "Lula" virando o molusco). Para animais
+# de verdade (peixe-leão, tubarão...) a foto da espécie é exatamente o que queremos.
+E_BICHO = ("espécie", "género", "gênero", "ordem de", "molusco", "cefalópode", "família de", "species", "genus",
+           "order of")
 
 
 def _foto_wikimedia(nome: str, destino: Path) -> bool:
@@ -144,7 +147,10 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
     (licença livre). Guarda autor e licença em CREDITOS."""
     import html
     import re as _re
-    nome = APELIDOS.get(nome.strip().lower(), nome.strip())
+    pedido = nome.strip()
+    nome = APELIDOS.get(pedido.lower(), pedido)
+    # parece nome de pessoa? (2+ palavras com maiúscula, ou veio de um apelido) → bicho/planta é engano
+    pessoa = nome != pedido or sum(p[:1].isupper() for p in nome.split()) >= 2
     for lingua in ("pt", "en"):
         try:
             r = requests.get(f"https://{lingua}.wikipedia.org/w/api.php", headers=UA, timeout=30, params={
@@ -153,7 +159,8 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
             pagina = next(iter(r.get("query", {}).get("pages", {}).values()), {})
             arquivo = pagina.get("pageimage")
             descricao = str(pagina.get("description", "")).lower()
-            if "disambiguation" in pagina.get("pageprops", {}) or any(p in descricao for p in NAO_E_ISSO):
+            if ("disambiguation" in pagina.get("pageprops", {}) or any(p in descricao for p in NAO_E_ISSO)
+                    or (pessoa and any(p in descricao for p in E_BICHO))):
                 print(f"   '{nome}' na Wikipédia ({lingua}) é outra coisa: {descricao or 'desambiguação'}")
                 continue
             if not arquivo:
