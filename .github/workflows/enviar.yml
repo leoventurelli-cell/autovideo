@@ -32,6 +32,8 @@ jobs:
       TZ: America/Sao_Paulo
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main   # painel mais novo: quem esperou na fila não briga ao salvar
 
       - uses: actions/setup-python@v5
         with:
