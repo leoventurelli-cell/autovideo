@@ -245,6 +245,8 @@ def main():
         print(f"   🖼️  cenas fixas do pedido: {r['cenas']}")
     if tema and "MÚSICA DE PERIGO" in tema.upper():
         r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
+    elif tema and ("MÚSICA PSICODÉLICA" in tema.upper() or "MÚSICA MÍSTICA" in tema.upper()):
+        r["musica"] = "psicodelica"  # trilha psicodélica/mística feita na hora (video._trilha_psicodelica)
     if tendencia:
         r["tendencia"] = tendencia
     print(f"   → {r['titulo']}")

@@ -424,6 +424,37 @@ def _trilha_perigo(destino: Path, segundos: float) -> Path | None:
         return None
 
 
+def _trilha_psicodelica(destino: Path, segundos: float) -> Path | None:
+    """Trilha psicodélica/mística feita na hora pelo FFmpeg (sem direito autoral): zumbido grave que ondula,
+    acorde etéreo com eco longo, arpejo pentatônico brilhante e um "ar" suave, tudo com phaser."""
+    import subprocess
+    d = f"{max(20.0, segundos):.1f}"
+    fim = float(d) - 3
+    k = "mod(floor(t*3),5)"
+    nota = f"if(eq({k},0),0,if(eq({k},1),3,if(eq({k},2),7,if(eq({k},3),10,12))))"
+    entradas = [
+        "-f", "lavfi", "-i", f"aevalsrc='0.35*sin(2*PI*65.41*t+2*sin(2*PI*0.07*t))+0.25*sin(2*PI*98.0*t+1.5*sin(2*PI*0.05*t))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.12*(sin(2*PI*261.63*t)+sin(2*PI*329.63*t)+sin(2*PI*392.0*t))*(0.6+0.4*sin(2*PI*0.1*t))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.22*sin(2*PI*523.25*pow(2,{nota}/12)*t)*exp(-5*mod(t,0.3333))':d={d}",
+        "-f", "lavfi", "-i", f"anoisesrc=d={d}:c=pink:a=0.08"]
+    filtro = ("[0]volume=0.8,aphaser=type=t:speed=0.3:decay=0.6[dr];[1]aecho=0.8:0.85:600|900:0.5|0.35,volume=0.9[pad];"
+              "[2]aecho=0.8:0.8:333|666:0.45|0.3,aphaser=speed=0.5,volume=0.7[arp];"
+              "[3]highpass=f=2000,lowpass=f=6000,volume=0.4[air];"
+              f"[dr][pad][arp][air]amix=inputs=4:normalize=0,afade=t=in:d=2,afade=t=out:st={fim:.1f}:d=3,"
+              "loudnorm=I=-16,aformat=channel_layouts=stereo:sample_rates=44100")
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *entradas, "-filter_complex", filtro, "-b:a", "96k",
+                        str(destino)], check=True, timeout=300)
+        print("   🎵 trilha psicodélica pronta")
+        return destino
+    except Exception as erro:
+        print(f"   ⚠️  trilha psicodélica falhou: {erro}")
+        return None
+
+
+TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica}  # nome pedido no tema → gerador
+
+
 def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
            formato: str = "curto", inicios_partes: list[float] | None = None) -> Path:
     usar_formato(formato)
@@ -462,8 +493,8 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
     final = pasta / "video_final.mp4"
     musicas = sorted(config.PASTA_MUSICA.glob("*.mp3"))
     volume_musica = config.VOLUME_MUSICA
-    if roteiro.get("musica") == "perigo":  # trilha de tensão pedida no tema
-        trilha = _trilha_perigo(pasta / "trilha_perigo.mp3", total + 2)
+    if roteiro.get("musica") in TRILHAS:  # trilha de clima pedida no tema (perigo, psicodélica...)
+        trilha = TRILHAS[roteiro["musica"]](pasta / f"trilha_{roteiro['musica']}.mp3", total + 2)
         if trilha:
             musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.22)
     entradas = ["-f", "concat", "-safe", "0", "-i", lista, "-i", audio]
