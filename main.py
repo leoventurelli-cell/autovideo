@@ -224,6 +224,10 @@ def main():
 
     print(f"🧠 Escrevendo o roteiro ({args.formato})...")
     r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
+    exata = re.search(r"NARRAÇÃO EXATA:\s*(.+?)\s*(?:CENAS FIXAS:|$)", tema or "", re.S)
+    if exata and not longo:  # pedido manual com o texto já escrito e conferido: narra exatamente isso
+        r["roteiro"] = exata.group(1).strip()
+        print("   📝 narração exata do pedido")
     r = gerador_roteiro.textos_virais(r, args.formato, tema)
     if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
         try:
