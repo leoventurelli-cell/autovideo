@@ -122,6 +122,12 @@ def _normalizar_foto(arquivo: Path):
     from PIL import Image
     with Image.open(arquivo) as im:
         im.seek(0)
+        if im.mode in ("RGBA", "LA", "P") or "transparency" in im.info:
+            # fundo transparente (desenhos, logos, moléculas) vira BRANCO; antes virava tela preta
+            im = im.convert("RGBA")
+            fundo = Image.new("RGBA", im.size, (255, 255, 255, 255))
+            fundo.alpha_composite(im)
+            im = fundo
         im = im.convert("RGB")
         im.thumbnail((2400, 2400))
         im.save(arquivo, "JPEG", quality=92)
