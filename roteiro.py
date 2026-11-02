@@ -203,21 +203,18 @@ def limpar_narracao(texto: str) -> str:
 
 # Quando nada do que está em alta serve, o canal usa estes temas que mais despertam curiosidade
 # (um por vez, em rodízio diário, para variar).
-CATEGORIAS_CURIOSAS = [
-    "lugares mal-assombrados reais e famosos (no Brasil ou no mundo) e a história documentada por trás das lendas",
-    "desaparecimentos e casos reais que nunca foram resolvidos",
-    "cidades, hospitais, hotéis ou parques abandonados e o que aconteceu ali",
-    "objetos amaldiçoados ou enigmáticos guardados em museus",
-    "sons, sinais e fenômenos estranhos registrados por cientistas e ainda sem explicação completa",
-    "descobertas arqueológicas que mudaram o que se sabia da história",
-    "lugares proibidos ou inacessíveis ao público e por quê",
-    "lendas e criaturas famosas que nasceram de fatos reais",
-    "mistérios do fundo do mar e das profundezas",
-    "OVNIs e casos investigados oficialmente por governos ou forças armadas",
+CATEGORIAS_CURIOSAS = [  # foco do canal: lugares curiosos, lugares assombrados e contato alienígena
+    "lugares mal-assombrados reais e famosos no Brasil e a história documentada por trás das lendas",
+    "casos famosos de contato alienígena e abduções relatadas, contando o que foi investigado e o que não se sabe",
+    "lugares proibidos ou inacessíveis ao público no mundo e por quê",
+    "lugares mal-assombrados reais e famosos no mundo (castelos, hotéis, hospitais) e a história por trás das lendas",
+    "OVNIs e casos investigados oficialmente por governos ou forças armadas (ex.: Operação Prato, Roswell, UAPs do Pentágono)",
+    "cidades, ilhas e vilas abandonadas e o que aconteceu ali",
+    "lugares mais estranhos e curiosos do Brasil (geografia, construções e histórias reais)",
+    "aparições e casas assombradas famosas investigadas por pesquisadores",
     "construções antigas que até hoje intrigam engenheiros e historiadores",
-    "acontecimentos bizarros e reais da história do Brasil",
-    "descobertas da ciência e da medicina que parecem ficção (tratamentos, órgãos, cérebro, genética), "
-    "dizendo em que fase está cada pesquisa, sem prometer cura",
+    "relatos de pilotos, astronautas e militares que viram objetos não identificados",
+    "ilhas, cavernas e florestas com lendas e fatos misteriosos",
 ]
 
 

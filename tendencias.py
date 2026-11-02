@@ -50,13 +50,13 @@ def google_trends(limite: int = 25) -> list[dict]:
 
 
 _GN = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q="
-NOTICIAS_MISTERIO = [  # notícias dos últimos 3 dias que já nascem curiosas
-    _GN + "mist%C3%A9rio+OR+enigma+OR+inexplic%C3%A1vel+OR+%22sem+explica%C3%A7%C3%A3o%22+when:3d",
-    _GN + "mal-assombrado+OR+assombra%C3%A7%C3%A3o+OR+fantasma+OR+%22lugar+abandonado%22+when:3d",
-    _GN + "arque%C3%B3logos+OR+%22descoberta+rara%22+OR+%22cientistas+descobrem%22+OR+f%C3%B3ssil+when:3d",
-    _GN + "OVNI+OR+%22fen%C3%B4meno+estranho%22+OR+%22luzes+no+c%C3%A9u%22+OR+NASA+when:3d",
-    _GN + "%22novo+tratamento%22+OR+%22estudo+revela%22+OR+%22pesquisadores+descobrem%22+OR+vacina+OR+terapia+when:3d",
-    _GN + "%22descoberta+cient%C3%ADfica%22+OR+%22avan%C3%A7o+da+medicina%22+OR+%22cientistas+criam%22+OR+telesc%C3%B3pio+when:3d",
+NOTICIAS_MISTERIO = [  # notícias recentes nos 4 focos do canal: política, lugares, assombrações e alienígenas
+    _GN + "Lula+OR+Congresso+OR+STF+OR+Trump+OR+%22Casa+Branca%22+OR+elei%C3%A7%C3%A3o+OR+Planalto+when:1d",
+    _GN + "%22pol%C3%ADtica+internacional%22+OR+%22crise+diplom%C3%A1tica%22+OR+presidente+OR+%22primeiro-ministro%22+when:1d",
+    _GN + "mal-assombrado+OR+assombra%C3%A7%C3%A3o+OR+fantasma+OR+%22casa+assombrada%22+OR+%22lugar+abandonado%22+when:7d",
+    _GN + "OVNI+OR+UAP+OR+extraterrestre+OR+alien%C3%ADgena+OR+%22vida+fora+da+Terra%22+OR+%22objeto+voador%22+when:7d",
+    _GN + "%22cidade+abandonada%22+OR+%22cidade+fantasma%22+OR+%22ilha+proibida%22+OR+%22lugar+misterioso%22+OR+%22lugar+proibido%22+when:7d",
+    _GN + "mist%C3%A9rio+OR+enigma+OR+inexplic%C3%A1vel+OR+%22sem+explica%C3%A7%C3%A3o%22+OR+arque%C3%B3logos+when:3d",
 ]
 
 # palavras de notícia com vítima/tragédia/crime: essas tendências NUNCA viram vídeo
@@ -89,7 +89,7 @@ def _sem_violencia(*textos) -> bool:
     return not _violento(*textos)
 
 
-def noticias_de_misterio(limite: int = 20) -> list[str]:
+def noticias_de_misterio(limite: int = 40) -> list[str]:
     """Manchetes recentes (3 dias) de descobertas, mistérios e ciência no Google Notícias Brasil."""
     titulos = []
     for url in NOTICIAS_MISTERIO:
@@ -129,11 +129,18 @@ Buscas em alta no Google (com manchetes do dia):
 Vídeos em alta no YouTube Brasil:
 {youtube}
 
-Notícias recentes de mistérios, descobertas e ciência (PREFIRA estas, são o assunto do canal):
+Notícias recentes de política, lugares curiosos, assombrações e OVNIs (PREFIRA estas, são o assunto do canal):
 {noticias}
 
 Temas que o canal JÁ fez (não repita): {usados}
 {evitar}
+
+FOCO DO CANAL (o dono pediu): escolha SEMPRE dentro destes 4 assuntos, nesta ordem de preferência:
+  1) POLÍTICA em alta (Brasil e mundo) que todo mundo está comentando → "tipo": "noticia", jornalístico e neutro;
+  2) CURIOSIDADES DE LUGARES (lugares proibidos, ilhas, cidades abandonadas, construções misteriosas);
+  3) LUGARES ASSOMBRADOS e lendas de assombração com história documentada;
+  4) CONTATO ALIENÍGENA, OVNIs e casos investigados.
+Animais, cogumelos, saúde e ciência em geral só entram se nada desses 4 estiver em alta hoje.
 
 Escolha UMA tendência de hoje e transforme num vídeo do nicho do canal, aprofundando o assunto:
 use a tendência como gancho e desenvolva com o lado curioso/misterioso e com fatos históricos ou
@@ -157,9 +164,9 @@ Regras:
 - FOFOCA de famosos que todo mundo está comentando VALE, se estiver nas manchetes de veículos conhecidos
   (ex.: término, casamento, briga pública, polêmica, revelação de um famoso): marque "tipo": "noticia"; o vídeo
   conta só o que as manchetes dizem, com "segundo", sem julgar nem inventar detalhes.
-- Política, ciência e tecnologia: só entram se for um acontecimento GRANDE do dia, que todo mundo está comentando
-  (ex.: decisão histórica, descoberta científica, lançamento espacial). Nesse caso marque "tipo": "noticia";
-  o vídeo vai ser jornalístico e neutro, só com o que está nas manchetes, sem acusar ninguém.
+- Política: prioridade do canal. Escolha o assunto político que mais está bombando hoje e marque "tipo": "noticia";
+  o vídeo vai ser jornalístico e neutro, só com o que está nas manchetes, com "segundo", sem acusar ninguém
+  e sem tomar lado.
 - Descobertas da ciência e da medicina (novo tratamento, vacina, terapia, estudo surpreendente) são ótimas: marque
   "tipo": "noticia". Nada de "cura milagrosa" ou promessa; o vídeo diz em que fase está a pesquisa.
 - Prefira as notícias de mistério/descoberta/ciência acima; das buscas do Google use só as que já são curiosidade
