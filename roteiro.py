@@ -203,7 +203,7 @@ def limpar_narracao(texto: str) -> str:
 
 # Quando nada do que está em alta serve, o canal usa estes temas que mais despertam curiosidade
 # (um por vez, em rodízio diário, para variar).
-CATEGORIAS_CURIOSAS = [  # foco do canal: lugares curiosos, lugares assombrados e contato alienígena
+CATEGORIAS_CURIOSAS = [  # foco do canal: lugares curiosos, assombrados, contato alienígena e saúde
     "lugares mal-assombrados reais e famosos no Brasil e a história documentada por trás das lendas",
     "casos famosos de contato alienígena e abduções relatadas, contando o que foi investigado e o que não se sabe",
     "lugares proibidos ou inacessíveis ao público no mundo e por quê",
@@ -215,6 +215,8 @@ CATEGORIAS_CURIOSAS = [  # foco do canal: lugares curiosos, lugares assombrados 
     "construções antigas que até hoje intrigam engenheiros e historiadores",
     "relatos de pilotos, astronautas e militares que viram objetos não identificados",
     "ilhas, cavernas e florestas com lendas e fatos misteriosos",
+    "remédios e tratamentos que mudaram a medicina e curas descobertas por acaso (história real, com datas), "
+    "dizendo em que fase está cada pesquisa nova, sem prometer cura, sem dose e sem indicar remédio",
 ]
 
 

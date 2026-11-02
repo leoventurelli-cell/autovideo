@@ -50,7 +50,8 @@ def google_trends(limite: int = 25) -> list[dict]:
 
 
 _GN = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q="
-NOTICIAS_MISTERIO = [  # notícias recentes nos 4 focos do canal: política, lugares, assombrações e alienígenas
+NOTICIAS_MISTERIO = [  # notícias recentes nos focos do canal: política, saúde, lugares, assombrações e alienígenas
+    _GN + "%22novo+tratamento%22+OR+%22novo+rem%C3%A9dio%22+OR+%22nova+vacina%22+OR+cura+OR+Anvisa+OR+%22estudo+revela%22+OR+terapia+when:3d",
     _GN + "Lula+OR+Congresso+OR+STF+OR+Trump+OR+%22Casa+Branca%22+OR+elei%C3%A7%C3%A3o+OR+Planalto+when:1d",
     _GN + "%22pol%C3%ADtica+internacional%22+OR+%22crise+diplom%C3%A1tica%22+OR+presidente+OR+%22primeiro-ministro%22+when:1d",
     _GN + "mal-assombrado+OR+assombra%C3%A7%C3%A3o+OR+fantasma+OR+%22casa+assombrada%22+OR+%22lugar+abandonado%22+when:7d",
@@ -129,18 +130,20 @@ Buscas em alta no Google (com manchetes do dia):
 Vídeos em alta no YouTube Brasil:
 {youtube}
 
-Notícias recentes de política, lugares curiosos, assombrações e OVNIs (PREFIRA estas, são o assunto do canal):
+Notícias recentes de política, saúde, lugares curiosos, assombrações e OVNIs (PREFIRA estas, são o assunto do canal):
 {noticias}
 
 Temas que o canal JÁ fez (não repita): {usados}
 {evitar}
 
-FOCO DO CANAL (o dono pediu): escolha SEMPRE dentro destes 4 assuntos, nesta ordem de preferência:
+FOCO DO CANAL (o dono pediu): escolha SEMPRE dentro destes 5 assuntos, nesta ordem de preferência:
   1) POLÍTICA em alta (Brasil e mundo) que todo mundo está comentando → "tipo": "noticia", jornalístico e neutro;
-  2) CURIOSIDADES DE LUGARES (lugares proibidos, ilhas, cidades abandonadas, construções misteriosas);
-  3) LUGARES ASSOMBRADOS e lendas de assombração com história documentada;
-  4) CONTATO ALIENÍGENA, OVNIs e casos investigados.
-Animais, cogumelos, saúde e ciência em geral só entram se nada desses 4 estiver em alta hoje.
+  2) SAÚDE: novas curas, remédios, vacinas e tratamentos em notícia → "tipo": "noticia", dizendo em que fase está
+     (estudo, teste em pessoas, aprovado pela Anvisa/FDA), sem "cura milagrosa", sem dose e sem indicar remédio;
+  3) CURIOSIDADES DE LUGARES (lugares proibidos, ilhas, cidades abandonadas, construções misteriosas);
+  4) LUGARES ASSOMBRADOS e lendas de assombração com história documentada;
+  5) CONTATO ALIENÍGENA, OVNIs e casos investigados.
+Animais, cogumelos e ciência em geral só entram se nada desses 5 estiver em alta hoje.
 
 Escolha UMA tendência de hoje e transforme num vídeo do nicho do canal, aprofundando o assunto:
 use a tendência como gancho e desenvolva com o lado curioso/misterioso e com fatos históricos ou
