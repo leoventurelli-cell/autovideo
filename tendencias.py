@@ -176,6 +176,35 @@ Responda SOMENTE com JSON:
   "angulo": "1 frase: como ligar a tendência ao nicho", "manchetes": ["manchetes de hoje que embasam o gancho"]}}"""
 
 
+_COMUNS = {"misterio", "misterios", "segredo", "segredos", "verdade", "historia", "historias", "descoberta",
+           "descobertas", "cientistas", "pesquisadores", "brasil", "brasileiro", "brasileira", "mundo", "curiosidade",
+           "curiosidades", "estranho", "incrivel", "revela", "revelado", "realmente", "pode", "podem", "sobre",
+           "ainda", "nunca", "antigo", "antiga", "novo", "nova", "ciencia", "caso", "casos", "anos"}
+
+
+def _palavras(texto: str) -> set[str]:
+    """Palavras importantes de um tema (sem acento, sem plural, sem palavras genéricas)."""
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(texto).lower())
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    saida = set()
+    for p in re.findall(r"[a-z]{5,}", t):
+        p = p[:-1] if p.endswith("s") else p
+        if p not in _COMUNS and p + "s" not in _COMUNS:
+            saida.add(p)
+    return saida
+
+
+def _repetido(dados: dict, usados: list[str], ultimos: int = 12) -> str | None:
+    """Devolve o tema recente parecido (mesma palavra-chave), se houver — ex.: 'cogumelo' três dias seguidos."""
+    novo = _palavras(f"{dados.get('tema', '')} {dados.get('tendencia', '')}")
+    for antigo in usados[-ultimos:]:
+        comum = novo & _palavras(antigo)
+        if comum:
+            return f"{antigo} (palavra repetida: {', '.join(sorted(comum))})"
+    return None
+
+
 def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | None:
     """Escolhe o tema do dia a partir das tendências. Retorna {'tema','tendencia','angulo','manchetes'} ou None."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
@@ -191,17 +220,28 @@ def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | N
         for g in google) or "(indisponível)"
     import roteiro
     pedir = roteiro._pedir_ao_groq if config.GROQ_API_KEY else roteiro._pedir_ao_gemini
-    try:
-        dados = pedir(PROMPT.format(
-            nicho=config.NICHO,
-            formato="Short de 1 minuto" if formato == "curto" else "vídeo longo de ~8 minutos com capítulos",
-            google=linhas_google, youtube="\n".join(f"- {t}" for t in youtube) or "(indisponível)",
-            noticias="\n".join(f"- {t}" for t in noticias) or "(indisponível)",
-            usados=", ".join(usados[-60:]) or "nenhum",
-            evitar=f"Não use esta tendência (já virou outro vídeo hoje): {evitar}" if evitar else "",
-        ))
-    except Exception as erro:
-        print(f"   ⚠️ não consegui escolher pela tendência ({erro})")
+    proibidos = [evitar] if evitar else []
+    for tentativa in range(3):  # o tema não pode repetir assunto dos últimos vídeos (a IA às vezes ignora a lista)
+        try:
+            dados = pedir(PROMPT.format(
+                nicho=config.NICHO,
+                formato="Short de 1 minuto" if formato == "curto" else "vídeo longo de ~8 minutos com capítulos",
+                google=linhas_google, youtube="\n".join(f"- {t}" for t in youtube) or "(indisponível)",
+                noticias="\n".join(f"- {t}" for t in noticias) or "(indisponível)",
+                usados=", ".join(usados[-60:]) or "nenhum",
+                evitar=("Não use estes assuntos de jeito nenhum (já viraram vídeo nos últimos dias): "
+                        + " | ".join(proibidos)) if proibidos else "",
+            ))
+        except Exception as erro:
+            print(f"   ⚠️ não consegui escolher pela tendência ({erro})")
+            return None
+        parecido = _repetido(dados, usados)
+        if not parecido:
+            break
+        print(f"   🔁 '{dados.get('tema')}' repete um vídeo recente: {parecido}. Escolhendo outro...")
+        proibidos.append(str(dados.get("tendencia") or dados.get("tema")))
+    else:
+        print("   as tendências de hoje repetem assuntos recentes; a IA escolhe um mistério novo.")
         return None
     if not str(dados.get("tema", "")).strip():
         print("   nenhuma tendência de hoje combinou com o canal; a IA escolhe o tema sozinha.")
