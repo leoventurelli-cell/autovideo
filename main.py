@@ -240,6 +240,13 @@ def main():
             tema, tendencia = None, None
             r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
             r = gerador_roteiro.textos_virais(r, args.formato, None)
+    _chaves = r"(?:TÍTULO EXATO:|CAPA:|DESCRIÇÃO EXATA:|LEGENDA EXATA:|NARRAÇÃO EXATA:|CENAS FIXAS:|$)"
+    for chave, campo in (("TÍTULO EXATO", "titulo"), ("CAPA", "texto_capa"),
+                         ("DESCRIÇÃO EXATA", "descricao"), ("LEGENDA EXATA", "legenda_tiktok")):
+        m = re.search(chave + r":\s*(.+?)\s*" + _chaves, tema or "", re.S)
+        if m and m.group(1).strip() and not longo:  # pedido manual com título/capa/descrição já conferidos
+            r[campo] = m.group(1).strip()
+            print(f"   ✏️  {campo} exato do pedido: {r[campo][:60]}")
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
     if gerador_roteiro.modo_noticia(tema) and "ILUSTRAÇÃO DE IA" not in tema.upper():
         r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
