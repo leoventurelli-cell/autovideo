@@ -48,8 +48,8 @@ GEMINI_API_KEY = _env("GEMINI_API_KEY", "")
 GEMINI_MODELO = _env("GEMINI_MODELO", "gemini-2.5-flash")
 
 # ───────────────────────── VOZ ─────────────────────────
-# Vozes em português: pt-BR-FranciscaNeural, pt-BR-AntonioNeural, pt-BR-ThalitaNeural
-VOZ = _env("VOZ", "pt-BR-AntonioNeural")
+# Vozes em português: pt-BR-ThalitaMultilingualNeural (atual), pt-BR-FranciscaNeural, pt-BR-AntonioNeural (reserva)
+VOZ = _env("VOZ", "pt-BR-ThalitaMultilingualNeural")
 VELOCIDADE_VOZ = _env("VELOCIDADE_VOZ", "+8%")  # um pouco mais rápido prende mais
 
 # ───────────────────────── VÍDEO ─────────────────────────

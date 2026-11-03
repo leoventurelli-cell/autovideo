@@ -458,7 +458,48 @@ def _trilha_psicodelica(destino: Path, segundos: float) -> Path | None:
         return None
 
 
-TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica}  # nome pedido no tema → gerador
+def _trilha_curiosidade(destino: Path, segundos: float) -> Path | None:
+    """Trilha de fundo padrão feita na hora pelo FFmpeg (sem direito autoral, nada para o TikTok bloquear):
+    lo-fi calmo de curiosidade, acordes Lá menor-Fá-Dó-Sol, baixo, arpejo suave, batida leve e chimbal."""
+    import subprocess
+    d = f"{max(20.0, segundos):.1f}"
+    fim = float(d) - 3
+    c = "mod(floor(t/2.6667),4)"  # troca de acorde a cada compasso (90 bpm)
+
+    def nota(a, f, cc, g):
+        return f"if(eq({c},0),{a},if(eq({c},1),{f},if(eq({c},2),{cc},{g})))"
+    r = nota(110.0, 87.31, 130.81, 98.0)        # baixo: lá, fá, dó, sol
+    n1 = nota(220.0, 174.61, 261.63, 196.0)
+    n2 = nota(261.63, 220.0, 329.63, 246.94)
+    n3 = nota(329.63, 261.63, 392.0, 293.66)
+    m = "mod(t,2.6667)"
+    env = f"pow(sin(PI*{m}/2.6667),0.6)"  # sobe e desce suave dentro do compasso (sem estalo na troca)
+    k = "mod(floor(t*3),4)"
+    arp = f"if(eq({k},0),{n1},if(eq({k},1),{n2},if(eq({k},2),{n3},{n2})))*2"
+    b = "mod(t,0.6667)"
+    entradas = [
+        "-f", "lavfi", "-i", f"aevalsrc='{env}*(0.16*sin(2*PI*{n1}*{m})+0.13*sin(2*PI*{n2}*{m})+0.12*sin(2*PI*{n3}*{m}))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='{env}*0.35*sin(2*PI*{r}*{m})':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.16*sin(2*PI*{arp}*mod(t,0.3333))*exp(-7*mod(t,0.3333))*(1-exp(-200*mod(t,0.3333)))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.55*sin(2*PI*(45+70*exp(-28*mod(t,1.3333)))*mod(t,1.3333))*exp(-9*mod(t,1.3333))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.10*(random(0)*2-1)*exp(-45*mod(t-0.3333,0.6667))*gte(t,0.3333)':d={d}",
+    ]
+    filtro = ("[0]lowpass=f=2500,aecho=0.8:0.6:300|500:0.3|0.2[pad];[1]lowpass=f=300[bx];"
+              "[2]lowpass=f=4000,aecho=0.8:0.7:333|667:0.35|0.2[arp];[3]lowpass=f=200[kick];[4]highpass=f=6000[hat];"
+              f"[pad][bx][arp][kick][hat]amix=inputs=5:normalize=0,afade=t=in:d=2,afade=t=out:st={fim:.1f}:d=3,"
+              "loudnorm=I=-16,aformat=channel_layouts=stereo:sample_rates=44100")
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *entradas, "-filter_complex", filtro, "-b:a", "96k",
+                        str(destino)], check=True, timeout=300)
+        print("   🎵 trilha de fundo pronta")
+        return destino
+    except Exception as erro:
+        print(f"   ⚠️  trilha de fundo falhou: {erro}")
+        return None
+
+
+TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica,
+           "fundo": _trilha_curiosidade}  # nome pedido no tema → gerador
 
 
 def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
@@ -503,6 +544,10 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         trilha = TRILHAS[roteiro["musica"]](pasta / f"trilha_{roteiro['musica']}.mp3", total + 2)
         if trilha:
             musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.22)
+    if not musicas:  # sem trilha pedida: fundo lo-fi próprio (sem direito autoral) em todo vídeo
+        trilha = _trilha_curiosidade(pasta / "trilha_fundo.mp3", total + 2)
+        if trilha:
+            musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.18)
     entradas = ["-f", "concat", "-safe", "0", "-i", lista, "-i", audio]
     if musicas:
         entradas += ["-stream_loop", "-1", "-i", random.choice(musicas)]

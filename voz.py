@@ -9,10 +9,13 @@ import edge_tts
 import config
 
 
-async def _sintetizar(texto: str, destino: Path) -> list[dict]:
+VOZ_RESERVA = "pt-BR-AntonioNeural"  # se a voz escolhida falhar, narra com esta
+
+
+async def _sintetizar(texto: str, destino: Path, voz: str | None = None) -> list[dict]:
     comunicador = edge_tts.Communicate(
         texto,
-        config.VOZ,
+        voz or config.VOZ,
         rate=config.VELOCIDADE_VOZ,
         boundary="WordBoundary",
     )
@@ -30,13 +33,16 @@ async def _sintetizar(texto: str, destino: Path) -> list[dict]:
 
 def gerar(texto: str, destino: Path) -> list[dict]:
     """Salva a narração em `destino` (mp3) e retorna a lista de palavras com tempos."""
-    for tentativa in range(3):
-        try:
-            palavras = asyncio.run(_sintetizar(texto, destino))
-            if palavras:
-                return palavras
-        except Exception as erro:  # rede instável, serviço ocupado
-            print(f"   voz falhou ({erro}), tentando de novo...")
+    vozes = [config.VOZ] + ([VOZ_RESERVA] if config.VOZ != VOZ_RESERVA else [])
+    for voz in vozes:
+        for tentativa in range(3):
+            try:
+                palavras = asyncio.run(_sintetizar(texto, destino, voz))
+                if palavras:
+                    return palavras
+            except Exception as erro:  # rede instável, serviço ocupado
+                print(f"   voz falhou ({erro}), tentando de novo...")
+        print(f"   ⚠️  a voz {voz} não respondeu; tentando a voz reserva")
     raise RuntimeError("Não consegui gerar a narração com o Edge-TTS.")
 
 
