@@ -96,8 +96,8 @@ jobs:
                   formato = "curto"
               elif agora >= hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26) and not feito("longo"):
                   formato = "longo"
-              elif agora >= hora(os.environ["HORA_CURIOSO"]) - timedelta(minutes=10) and not feito("curto", True)
-                    and agora < hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26):
+              elif (agora >= hora(os.environ["HORA_CURIOSO"]) - timedelta(minutes=10) and not feito("curto", True)
+                    and agora < hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26)):
                   formato, tipo = "curto", "curiosidade"
           atraso = ""
           if formato:
