@@ -39,10 +39,13 @@ jobs:
       rodar: ${{ steps.d.outputs.rodar }}
       formato: ${{ steps.d.outputs.formato }}
       tipo: ${{ steps.d.outputs.tipo }}
+      slot: ${{ steps.d.outputs.slot }}
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: docs/videos.json
+          sparse-checkout: |
+            docs/videos.json
+            docs/radar.json
           sparse-checkout-cone-mode: false
       - id: d
         env:
@@ -54,6 +57,8 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           HORA_SHORT: "09:00"
           HORA_CURIOSO: "15:00"   # Short de curiosidade (perguntas que todo mundo quer saber)
+          RADAR: "11:30,13:30,20:30,22:00"   # radar: Short extra se um assunto estiver explodindo (máx. 2/dia)
+          RADAR_MAX: "2"
           HORA_LONGO: "18:00"
         run: |
           python3 - <<'PY'
@@ -85,7 +90,7 @@ jobs:
               videos = []
           hoje = agora.date().isoformat()
           feito = lambda f, cur=False: any(v.get("formato") == f and bool(v.get("curiosidade")) == cur
-                                and not v.get("chamada_de") and not v.get("manual")
+                                and not v.get("chamada_de") and not v.get("manual") and not v.get("alta")
                                 and str(v.get("data", "")).startswith(hoje) for v in videos)
           hora = lambda h: agora.replace(hour=int(h[:2]), minute=int(h[3:]), second=0, microsecond=0)
           # começa alguns minutos ANTES para o vídeo ficar pronto no horário
@@ -99,12 +104,26 @@ jobs:
               elif (agora >= hora(os.environ["HORA_CURIOSO"]) - timedelta(minutes=10) and not feito("curto", True)
                     and agora < hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26)):
                   formato, tipo = "curto", "curiosidade"
+          slot = ""
+          if not formato and (agora.hour < 23 or agora.minute < 30):
+              try:
+                  radar = json.load(open("docs/radar.json", encoding="utf-8"))
+              except Exception:
+                  radar = {}
+              if radar.get("data") != hoje:
+                  radar = {"feitos": [], "videos": 0}
+              if int(radar.get("videos", 0)) < int(os.environ["RADAR_MAX"]):
+                  for s in os.environ["RADAR"].split(","):
+                      if s not in radar.get("feitos", []) and hora(s) <= agora < hora(s) + timedelta(minutes=90):
+                          formato, tipo, slot = "curto", "alta", s
+                          break
           atraso = ""
           if formato:
-              alvo = hora(os.environ["HORA_CURIOSO" if tipo else "HORA_SHORT" if formato == "curto" else "HORA_LONGO"])
+              alvo = (hora(slot) if slot else
+                      hora(os.environ["HORA_CURIOSO" if tipo else "HORA_SHORT" if formato == "curto" else "HORA_LONGO"]))
               atraso = f" ({int((agora - alvo).total_seconds() // 60)} min depois do horário)"
           print(f"{agora:%H:%M} Brasília → " + (f"hora do vídeo {formato}{atraso}" if formato else "nada a fazer agora"))
-          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\ntipo={tipo}\n")
+          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\ntipo={tipo}\nslot={slot}\n")
           PY
 
   video:
@@ -171,6 +190,7 @@ jobs:
           AGENDADO: ${{ github.event.inputs.agendado }}
           FORMATO: ${{ needs.decidir.outputs.formato }}
           TIPO: ${{ needs.decidir.outputs.tipo }}
+          SLOT: ${{ needs.decidir.outputs.slot }}
           SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
         run: |
           ARGS=()
@@ -207,7 +227,7 @@ jobs:
         run: |
           git config user.name "autovideo-bot"
           git config user.email "autovideo-bot@users.noreply.github.com"
-          for f in historico.json temas.txt docs/videos.json docs/config.json docs/sugestoes.json tiktok.token youtube.token; do
+          for f in historico.json temas.txt docs/videos.json docs/radar.json docs/config.json docs/sugestoes.json tiktok.token youtube.token; do
             [ -e "$f" ] && git add "$f"
           done
           [ -d docs/tiktok ] && git add -A docs/tiktok  # cópias leves dos Shorts para o celular
