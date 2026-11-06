@@ -136,7 +136,7 @@ def _normalizar_foto(arquivo: Path):
 # apelidos que na Wikipédia são outra coisa (ex.: "Lula" em português é o molusco)
 APELIDOS = {"lula": "Luiz Inácio Lula da Silva", "bolsonaro": "Jair Bolsonaro", "jair bolsonaro": "Jair Bolsonaro",
             "moraes": "Alexandre de Moraes", "xandão": "Alexandre de Moraes", "dilma": "Dilma Rousseff",
-            "fhc": "Fernando Henrique Cardoso", "temer": "Michel Temer", "alckmin": "Geraldo Alckmin",
+            "pentágono": "The Pentagon", "pentagono": "The Pentagon", "fhc": "Fernando Henrique Cardoso", "temer": "Michel Temer", "alckmin": "Geraldo Alckmin",
             "flávio": "Flávio Bolsonaro", "eduardo bolsonaro": "Eduardo Bolsonaro", "tarcísio": "Tarcísio de Freitas",
             "trump": "Donald Trump", "milei": "Javier Milei", "pelé": "Pelé", "neymar": "Neymar", "stf": "Supremo Tribunal Federal",
             "pf": "Polícia Federal (Brasil)", "tse": "Tribunal Superior Eleitoral"}
@@ -146,6 +146,77 @@ NAO_E_ISSO = ("desambigua", "disambiguation", "página de")
 # de verdade (peixe-leão, tubarão...) a foto da espécie é exatamente o que queremos.
 E_BICHO = ("espécie", "género", "gênero", "ordem de", "molusco", "cefalópode", "família de", "species", "genus",
            "order of")
+
+
+# logo, brasão, bandeira, mapa, brinquedo, desenho: ficam horríveis no vídeo e não mostram o assunto
+# (ex.: 'Força Aérea Brasileira' virava o brasão, 'Pentágono' virava a figura geométrica)
+RUINS = ("logo", "seal", "emblem", "coat of arms", "brasão", "brasao", "bandeira", "flag", "selo", "insignia",
+         "símbolo", "simbolo", "icon", "wordmark", "diagram", "locator", "location map", "mapa", "map of",
+         "municip", "escudo", "roundel", "badge", "brinquedo", "toy", "stamp", "cartoon")
+PEDE_SIMBOLO = ("bandeira", "flag", "brasão", "brasao", "logo", "mapa", "map", "selo", "seal", "escudo", "emblem")
+VIDEO_MIME = ("video/webm", "video/ogg", "video/mp4")
+FOTO_MIME = ("image/jpeg", "image/png", "image/webp", "image/tiff")
+_VAZIAS_BUSCA = {"video", "foto", "photo", "image", "imagem", "footage", "picture", "the", "and", "dos", "das", "com"}
+
+
+def _arquivo_ruim(arquivo: str, pedido: str) -> bool:
+    if any(p in pedido.lower() for p in PEDE_SIMBOLO):
+        return False  # o trecho fala da bandeira/mapa: aí pode
+    a = arquivo.lower().replace("_", " ")
+    return a.endswith((".svg", ".svg.png", ".gif", ".pdf", ".djvu")) or any(p in a for p in RUINS)
+
+
+def _sem_acento(t: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(t).lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def _midia_commons(busca: str, pasta: Path, i: int) -> Path | None:
+    """Procura no Wikimedia Commons a FOTO ou o VÍDEO real do que a narração cita (ex.: o vídeo 'Gimbal'
+    da Marinha americana, o prédio do Pentágono). O nome do arquivo precisa ter as palavras da busca."""
+    import html
+    import re as _re
+    palavras = [p for p in _re.findall(r"\w{3,}", _sem_acento(busca)) if p not in _VAZIAS_BUSCA]
+    if not palavras:
+        return None
+    minimo = len(palavras) if len(palavras) <= 2 else -(-len(palavras) // 2)
+    try:
+        r = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
+            "action": "query", "format": "json", "formatversion": 2, "generator": "search", "gsrnamespace": 6,
+            "gsrlimit": 15, "gsrsearch": busca, "prop": "imageinfo",
+            "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 1920}).json()
+        for p in sorted(r.get("query", {}).get("pages", []), key=lambda p: p.get("index", 99)):
+            ii = (p.get("imageinfo") or [{}])[0]
+            titulo = p.get("title", "")[5:]
+            mime = ii.get("mime", "")
+            if mime not in VIDEO_MIME + FOTO_MIME or _arquivo_ruim(titulo, busca):
+                continue
+            if sum(w in _sem_acento(titulo) for w in palavras) < minimo:
+                continue  # resultado que não é do assunto
+            video = mime in VIDEO_MIME
+            if video and ii.get("size", 0) > 80_000_000:
+                continue
+            if not video and min(ii.get("width", 0), ii.get("height", 0)) < 400:
+                continue
+            url = ii["url"] if video else (ii.get("thumburl") or ii["url"])
+            destino = pasta / (f"clipe_{i}_commons{Path(ii['url']).suffix.lower()}" if video else f"clipe_{i}.jpg")
+            with requests.get(url, headers=UA, stream=True, timeout=180) as d:
+                d.raise_for_status()
+                with open(destino, "wb") as f:
+                    for bloco in d.iter_content(1 << 20):
+                        f.write(bloco)
+            if not video:
+                _normalizar_foto(destino)
+            meta = ii.get("extmetadata", {})
+            autor = _re.sub("<[^>]+>", "", html.unescape(meta.get("Artist", {}).get("value", ""))).strip()
+            licenca = meta.get("LicenseShortName", {}).get("value", "")
+            CREDITOS.append(f"{titulo}: {autor or 'Wikimedia Commons'} ({licenca}, Wikimedia Commons)")
+            print(f"   {'🎞️  vídeo' if video else '🖼️  foto'} real do Commons para '{busca}': {titulo}")
+            return destino
+    except Exception as erro:
+        print(f"   Commons sem mídia para '{busca}' ({erro})")
+    return None
 
 
 def _foto_wikimedia(nome: str, destino: Path) -> bool:
@@ -170,6 +241,9 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
                 print(f"   '{nome}' na Wikipédia ({lingua}) é outra coisa: {descricao or 'desambiguação'}")
                 continue
             if not arquivo:
+                continue
+            if _arquivo_ruim(arquivo, pedido):
+                print(f"   '{nome}' ({lingua}) só tem logo/brasão/mapa ({arquivo}); procurando foto de verdade")
                 continue
             info = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
                 "action": "query", "titles": f"File:{arquivo}", "prop": "imageinfo",
@@ -204,7 +278,7 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
     unicos = list(dict.fromkeys(cenas))
     usados, clipes = set(), {}
     for i, termo in enumerate(unicos):
-        tipo, _, valor = termo.partition(":") if termo.split(":", 1)[0] in ("wiki", "ia") else ("", "", termo)
+        tipo, _, valor = termo.partition(":") if termo.split(":", 1)[0] in ("wiki", "ia", "commons") else ("", "", termo)
         valor = valor.strip()
         if not tipo and any(p in f" {termo.lower()} " for p in IMAGINARIOS):
             tipo = "ia"  # banco de vídeo não tem ET/nave de verdade: desenha a cena
@@ -214,6 +288,12 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
                 clipes[termo] = foto
                 print(f"   🖼️  foto real {i + 1}/{len(unicos)}: '{valor}'")
                 continue
+        if tipo in ("wiki", "commons") or so_reais:  # foto ou VÍDEO real do que foi citado, no Commons
+            achado = _midia_commons(valor or termo, pasta, i)
+            if achado:
+                clipes[termo] = achado
+                continue
+        if tipo in ("wiki", "commons"):
             tipo = "ia"  # sem foto livre: desenha a cena
         if so_reais:
             clipes[termo] = None  # notícia: depois repete uma foto real que deu certo
@@ -341,7 +421,31 @@ def _preparar_cena(clipe: Path | None, segundos: float, destino: Path, inicio_cl
         except Exception as erro:
             print(f"   ⚠️  foto {clipe.name} não abriu ({str(erro)[-120:]}); usando fundo animado")
             return _preparar_cena(None, segundos, destino)
+    if "_commons" in clipe.name:
+        try:
+            return _cena_de_video_inteiro(clipe, segundos, destino, inicio_clipe)
+        except Exception as erro:
+            print(f"   ⚠️  vídeo {clipe.name} não abriu ({str(erro)[-120:]}); usando fundo animado")
+            return _preparar_cena(None, segundos, destino)
     _cena_de_video(clipe, segundos, destino, inicio_clipe)
+
+
+def _cena_de_video_inteiro(clipe: Path, segundos: float, destino: Path, inicio_clipe: float = 0.0):
+    """Vídeo real do Commons (quase sempre deitado): mostra o quadro INTEIRO sobre o próprio vídeo desfocado,
+    sem cortar o objeto filmado."""
+    entrada = ["-stream_loop", "-1"]
+    if inicio_clipe > 0:
+        inicio_clipe = inicio_clipe % max(duracao(clipe) - 1.0, 1.0)
+    if inicio_clipe > 0.1:
+        entrada += ["-ss", f"{inicio_clipe:.2f}"]
+    _ffmpeg(
+        *entrada, "-i", clipe, "-t", f"{segundos:.3f}", "-filter_complex",
+        f"[0:v]fps={FPS},split[a][b];"
+        f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=-0.15[f];"
+        f"[b]scale={W}:{H}:force_original_aspect_ratio=decrease[c];"
+        "[f][c]overlay=(W-w)/2:(H-h)/2,setsar=1,format=yuv420p",
+        "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", destino,
+    )
 
 
 def _cena_de_foto(clipe: Path, segundos: float, destino: Path):

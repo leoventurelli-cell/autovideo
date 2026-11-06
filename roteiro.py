@@ -193,9 +193,9 @@ def limpar_narracao(texto: str) -> str:
     t = str(texto or "")
     # frase que é só a lista de cenas lida em voz alta ("wiki:A, wiki:B, wiki:C..."): sai inteira
     frases = re.split(r"(?<=[.!?\n])", t)
-    t = "".join(f for f in frases if len(re.findall(r"\b(?:wiki|ia)\s*:", f, re.I)) < 3)
+    t = "".join(f for f in frases if len(re.findall(r"\b(?:wiki|ia|commons)\s*:", f, re.I)) < 3)
     t = re.sub(r"\bia\s*:\s*[^,.;!?\n]+", "", t, flags=re.I)  # descrição de imagem em inglês: sai inteira
-    t = re.sub(r"\bwiki\s*:\s*", "", t, flags=re.I)              # nome real: fica só o nome
+    t = re.sub(r"\b(?:wiki|commons)\s*:\s*", "", t, flags=re.I)              # nome real: fica só o nome
     t = re.sub(r"\s*\((?:Brasil|Brazil|Argentina|EUA|cidade|país)\)", "", t)  # "(Brasil)" do nome do artigo
     t = re.sub(r"[ \t]{2,}", " ", t)
     return re.sub(r"\s+([,.!?])", r"\1", t).strip()
@@ -493,6 +493,12 @@ Regras:
 - Lugar, construção, objeto, animal ou evento real citado → 'wiki:' + nome do artigo (ex: 'wiki:Castelo de Edimburgo').
 - Coisa imaginada, lenda, assombração, ET, cena histórica sem foto → 'ia:' + descrição visual em inglês
   (nunca o rosto de uma pessoa real em 'ia:').
+- Documento, vídeo, foto ou caso real citado no trecho (ex.: o vídeo de OVNI 'Gimbal' da Marinha, a Operação Prato,
+  um relatório) → 'commons:' + busca curta com as palavras que estariam no NOME do arquivo no Wikimedia Commons,
+  para mostrar a foto ou o VÍDEO verdadeiro (ex: 'commons:Gimbal UAP', 'commons:Operação Prato', 'commons:Colares Pará Brasil').
+- Órgão de governo ou das forças armadas → mostre o PRÉDIO, o avião ou o equipamento, nunca o logo:
+  'wiki:The Pentagon' (o prédio; 'Pentágono' sozinho é a figura geométrica), 'commons:Brazilian Air Force aircraft'.
+- Nunca escolha logo, brasão, selo, bandeira, mapa, desenho ou emissora de TV, a não ser que o trecho fale disso.
 - Ambiente genérico (céu à noite, floresta, oceano) → termo de busca curto EM INGLÊS para vídeo de banco.
 - Nunca use 'wiki:' para jornais, sites ou empresas; nunca imagem que não tenha a ver com o trecho.
 - Mantenha a cena atual se ela já combina.
