@@ -38,6 +38,7 @@ jobs:
     outputs:
       rodar: ${{ steps.d.outputs.rodar }}
       formato: ${{ steps.d.outputs.formato }}
+      tipo: ${{ steps.d.outputs.tipo }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +53,7 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           HORA_SHORT: "09:00"
+          HORA_CURIOSO: "15:00"   # Short de curiosidade (perguntas que todo mundo quer saber)
           HORA_LONGO: "18:00"
         run: |
           python3 - <<'PY'
@@ -82,23 +84,27 @@ jobs:
           except Exception:
               videos = []
           hoje = agora.date().isoformat()
-          feito = lambda f: any(v.get("formato") == f and not v.get("chamada_de") and not v.get("manual")
+          feito = lambda f, cur=False: any(v.get("formato") == f and bool(v.get("curiosidade")) == cur
+                                and not v.get("chamada_de") and not v.get("manual")
                                 and str(v.get("data", "")).startswith(hoje) for v in videos)
           hora = lambda h: agora.replace(hour=int(h[:2]), minute=int(h[3:]), second=0, microsecond=0)
           # começa alguns minutos ANTES para o vídeo ficar pronto no horário
           # (o Short leva ~6 min para gerar; o longo + Short, ~22 min)
-          formato = None
+          formato, tipo = None, ""
           if agora.hour < 23 or agora.minute < 30:
               if agora >= hora(os.environ["HORA_SHORT"]) - timedelta(minutes=10) and not feito("curto"):
                   formato = "curto"
               elif agora >= hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26) and not feito("longo"):
                   formato = "longo"
+              elif agora >= hora(os.environ["HORA_CURIOSO"]) - timedelta(minutes=10) and not feito("curto", True)
+                    and agora < hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26):
+                  formato, tipo = "curto", "curiosidade"
           atraso = ""
           if formato:
-              alvo = hora(os.environ["HORA_SHORT" if formato == "curto" else "HORA_LONGO"])
+              alvo = hora(os.environ["HORA_CURIOSO" if tipo else "HORA_SHORT" if formato == "curto" else "HORA_LONGO"])
               atraso = f" ({int((agora - alvo).total_seconds() // 60)} min depois do horário)"
           print(f"{agora:%H:%M} Brasília → " + (f"hora do vídeo {formato}{atraso}" if formato else "nada a fazer agora"))
-          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\n")
+          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\ntipo={tipo}\n")
           PY
 
   video:
@@ -164,6 +170,7 @@ jobs:
           TEMA: ${{ github.event.inputs.tema }}
           AGENDADO: ${{ github.event.inputs.agendado }}
           FORMATO: ${{ needs.decidir.outputs.formato }}
+          TIPO: ${{ needs.decidir.outputs.tipo }}
           SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
         run: |
           ARGS=()
