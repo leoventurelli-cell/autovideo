@@ -215,13 +215,45 @@ def _repetido(dados: dict, usados: list[str], ultimos: int = 12) -> str | None:
     return None
 
 
-def escolher_tema(formato: str, usados: list[str], evitar: str = "") -> dict | None:
+RADAR_MINIMO = 100_000  # buscas no Google (Brasil) para um assunto contar como "explodindo"
+
+
+def _volume(texto: str) -> int:
+    """'200K+' → 200000, '1M+' → 1000000, '2.000+' → 2000."""
+    t = str(texto or "").upper().replace("+", "").replace(".", "").replace(",", "").strip()
+    mult = 1_000_000 if t.endswith("M") else 1_000 if t.endswith("K") else 1
+    try:
+        return int(float(t.rstrip("MK") or 0) * mult)
+    except ValueError:
+        return 0
+
+
+def radar(usados: list[str]) -> dict | None:
+    """Radar fora do horário: só devolve tema se um assunto estiver EXPLODINDO agora (100 mil+ buscas),
+    for de curiosidade, sem tragédia e sem repetir vídeo recente."""
+    fortes = [g for g in google_trends(40) if _volume(g["volume"]) >= RADAR_MINIMO
+              and _sem_violencia(g["busca"], *g["manchetes"])]
+    print("📡 Radar: " + (", ".join(f"{g['busca']} ({g['volume']})" for g in fortes) or "nada passou de 100 mil buscas"))
+    if not fortes:
+        return None
+    escolha = escolher_tema("curto", usados, google=fortes)
+    if not escolha:
+        return None
+    alvo = _palavras(f"{escolha.get('tendencia', '')} {escolha.get('tema', '')}")
+    if not any(alvo & _palavras(g["busca"] + " " + " ".join(g["manchetes"])) for g in fortes):
+        print(f"   o tema escolhido ('{escolha.get('tema')}') não é um dos assuntos explodindo; sem vídeo extra")
+        return None
+    return escolha
+
+
+def escolher_tema(formato: str, usados: list[str], evitar: str = "", google: list[dict] | None = None) -> dict | None:
     """Escolhe o tema do dia a partir das tendências. Retorna {'tema','tendencia','angulo','manchetes'} ou None."""
     if not (config.GROQ_API_KEY or config.GEMINI_API_KEY):
         return None
-    google = [g for g in google_trends() if _sem_violencia(g["busca"], *g["manchetes"])]
-    youtube = [t for t in youtube_em_alta() if _sem_violencia(t)]
-    noticias = noticias_de_misterio()
+    radar_ = google is not None  # radar: só os assuntos explodindo agora
+    google = google if radar_ else [g for g in google_trends() if _sem_violencia(g["busca"], *g["manchetes"])]
+    youtube = [] if radar_ else [t for t in youtube_em_alta() if _sem_violencia(t)]
+    noticias = [] if radar_ else noticias_de_misterio()
     if not google and not youtube and not noticias:
         print("   ⚠️ não consegui ler as tendências de hoje; a IA escolhe o tema sozinha.")
         return None

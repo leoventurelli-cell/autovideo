@@ -191,6 +191,25 @@ def _curiosidade() -> bool:
     return os.getenv("TIPO") == "curiosidade"
 
 
+def _alta() -> bool:
+    return os.getenv("TIPO") == "alta"  # radar: Short extra quando um assunto explode fora do horário
+
+
+def _marcar_radar(gerou: bool):
+    """Anota em docs/radar.json que o radar deste horário já olhou (e se gerou vídeo), para não repetir."""
+    arquivo = config.PASTA / "docs" / "radar.json"
+    hoje = datetime.now().astimezone().date().isoformat()
+    try:
+        d = json.loads(arquivo.read_text(encoding="utf-8"))
+    except Exception:
+        d = {}
+    if d.get("data") != hoje:
+        d = {"data": hoje, "feitos": [], "videos": 0}
+    d["feitos"] = sorted(set(d.get("feitos", [])) | {os.getenv("SLOT") or datetime.now().strftime("%H:%M")})
+    d["videos"] = int(d.get("videos", 0)) + (1 if gerou else 0)
+    arquivo.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def _automatico() -> bool:
     return os.getenv("GITHUB_EVENT_NAME") == "schedule" or os.getenv("AGENDADO") == "sim"
 
@@ -214,6 +233,8 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
         item["tendencia"] = r["tendencia"]
     if _curiosidade() and formato == "curto":
         item["curiosidade"] = True  # Short das 15h (não conta como o Short das 9h)
+    if _alta() and formato == "curto":
+        item["alta"] = True  # Short extra do radar (assunto explodindo)
     if not _automatico():
         item["manual"] = True  # pedido à mão: não conta como o vídeo do horário automático
     if r.get("_tag") and "id" not in item:
@@ -251,12 +272,12 @@ def main():
 
     # horário automático: se já saiu um vídeo desse formato hoje (ex.: o agendamento do GitHub
     # atrasou e alguém já gerou na mão), não repete
-    if _automatico():
+    if _automatico() and not _alta():
         try:
             hoje = datetime.now().astimezone().date().isoformat()
             lista = json.loads((config.PASTA / "docs" / "videos.json").read_text(encoding="utf-8"))
             if any(v.get("formato") == args.formato and bool(v.get("curiosidade")) == _curiosidade()
-                   and not v.get("chamada_de") and not v.get("manual")
+                   and not v.get("alta") and not v.get("chamada_de") and not v.get("manual")
                    and str(v.get("data", "")).startswith(hoje) for v in lista):
                 print(f"⏭️  Já tem vídeo {args.formato} de hoje no painel; o horário automático não vai repetir.")
                 return
@@ -264,11 +285,23 @@ def main():
             pass
 
     historico = _historico()
-    if not args.tema and not longo and _curiosidade():
+    tendencia = None
+    if not args.tema and not longo and _alta():
+        import tendencias
+        try:
+            escolha = tendencias.radar(historico)
+        except Exception:
+            traceback.print_exc()
+            escolha = None
+        _marcar_radar(bool(escolha))
+        if not escolha:
+            print("📡 Nenhum assunto explodindo que combine com o canal agora; sem vídeo extra.")
+            return
+        tema, tendencia = tendencias.tema_com_contexto(escolha), escolha.get("tendencia")
+    elif not args.tema and not longo and _curiosidade():
         tema = _pergunta_curiosa(historico)
     else:
         tema = args.tema or (None if longo else _proximo_tema_da_lista())
-    tendencia = None
     if not tema:  # automático: parte do que está em alta hoje no Brasil
         print("📈 Olhando o que está em alta hoje (Google Trends + YouTube)...")
         try:
