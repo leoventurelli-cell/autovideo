@@ -139,6 +139,58 @@ def copia_para_celular(arquivo, nome: str, manter: int = 6) -> str | None:
         return None
 
 
+# Short das 15h: perguntas que despertam muita curiosidade no público geral (respondidas com o que a ciência sabe)
+PERGUNTAS_CURIOSAS = [
+    "O mundo vai acabar? O que a ciência diz sobre o fim da Terra",
+    "Se uma bomba atômica explodisse numa cidade grande, qual seria o estrago? O que Hiroshima e Nagasaki mostraram",
+    "Podemos ter uma nova pandemia? O que os cientistas estão vigiando agora",
+    "Existe vida após a morte? O que dizem os estudos sobre experiências de quase-morte",
+    "Um asteroide pode atingir a Terra? Quais estão sendo vigiados pela NASA",
+    "Estamos sozinhos no universo? O que a ciência já encontrou de verdade",
+    "O que acontece no cérebro quando a gente morre?",
+    "E se o Sol apagasse? Quanto tempo a Terra aguentaria",
+    "A inteligência artificial pode sair do controle? O que os especialistas dizem",
+    "Uma tempestade solar pode desligar a internet e a energia do mundo?",
+    "E se a Lua sumisse? O que mudaria na Terra",
+    "O que aconteceria se uma guerra nuclear começasse hoje?",
+    "Viagem no tempo é possível segundo a física?",
+    "O que acontece com o corpo se você ficar dias sem dormir?",
+    "E se todo o gelo dos polos derretesse? Que cidades do Brasil sumiriam",
+    "Um supervulcão pode acabar com a humanidade? O caso de Yellowstone",
+    "Quanto tempo uma pessoa sobrevive sem água e sem comida?",
+    "Um buraco negro poderia engolir a Terra?",
+    "Vamos conseguir viver para sempre? O que a ciência sabe sobre envelhecimento",
+    "O Brasil pode ter um terremoto gigante?",
+    "E se a Terra parasse de girar por um segundo?",
+    "Por que a gente sonha? O que a ciência descobriu",
+    "Pode existir uma nova era do gelo?",
+    "E se as abelhas desaparecessem? O que aconteceria com a comida",
+    "Déjà vu: por que temos a sensação de já ter vivido aquilo?",
+    "O que existe no fundo do oceano que quase ninguém viu?",
+    "Quantas pessoas a Terra aguenta?",
+    "E se a internet do mundo inteiro caísse por uma semana?",
+    "Por que algumas pessoas sentem uma presença no escuro? O que a ciência explica",
+    "Seres humanos vão conseguir morar em Marte? Quando",
+]
+
+
+def _pergunta_curiosa(historico: list[str]) -> str:
+    """Escolhe a próxima pergunta do Short das 15h, em rodízio, pulando as que já viraram vídeo há pouco."""
+    from tendencias import _palavras
+    recentes = set().union(*(_palavras(h) for h in historico[-40:])) if historico else set()
+    inicio = datetime.now().timetuple().tm_yday % len(PERGUNTAS_CURIOSAS)
+    ordem = PERGUNTAS_CURIOSAS[inicio:] + PERGUNTAS_CURIOSAS[:inicio]
+    pergunta = next((q for q in ordem if len(_palavras(q) & recentes) * 2 < max(1, len(_palavras(q)))), ordem[0])
+    print(f"❓ Short de curiosidade das 15h: {pergunta}")
+    return (f"{pergunta}. Short de curiosidade para o público geral: comece com a pergunta como gancho forte, "
+            "responda com o que a ciência e os registros reais sabem (estudos, casos históricos, especialistas), "
+            "sem alarmismo, sem inventar números e sem prometer nada; termine perguntando a opinião de quem assiste.")
+
+
+def _curiosidade() -> bool:
+    return os.getenv("TIPO") == "curiosidade"
+
+
 def _automatico() -> bool:
     return os.getenv("GITHUB_EVENT_NAME") == "schedule" or os.getenv("AGENDADO") == "sim"
 
@@ -160,6 +212,8 @@ def _registrar_no_painel(r: dict, resultados: dict, mp4: str | None, segundos: f
             "textos": textos or _textos_para_colar(r, formato, capitulos), **(extra or {}), **resultados}
     if r.get("tendencia"):
         item["tendencia"] = r["tendencia"]
+    if _curiosidade() and formato == "curto":
+        item["curiosidade"] = True  # Short das 15h (não conta como o Short das 9h)
     if not _automatico():
         item["manual"] = True  # pedido à mão: não conta como o vídeo do horário automático
     if r.get("_tag") and "id" not in item:
@@ -201,7 +255,8 @@ def main():
         try:
             hoje = datetime.now().astimezone().date().isoformat()
             lista = json.loads((config.PASTA / "docs" / "videos.json").read_text(encoding="utf-8"))
-            if any(v.get("formato") == args.formato and not v.get("chamada_de") and not v.get("manual")
+            if any(v.get("formato") == args.formato and bool(v.get("curiosidade")) == _curiosidade()
+                   and not v.get("chamada_de") and not v.get("manual")
                    and str(v.get("data", "")).startswith(hoje) for v in lista):
                 print(f"⏭️  Já tem vídeo {args.formato} de hoje no painel; o horário automático não vai repetir.")
                 return
@@ -209,7 +264,10 @@ def main():
             pass
 
     historico = _historico()
-    tema = args.tema or (None if longo else _proximo_tema_da_lista())
+    if not args.tema and not longo and _curiosidade():
+        tema = _pergunta_curiosa(historico)
+    else:
+        tema = args.tema or (None if longo else _proximo_tema_da_lista())
     tendencia = None
     if not tema:  # automático: parte do que está em alta hoje no Brasil
         print("📈 Olhando o que está em alta hoje (Google Trends + YouTube)...")
