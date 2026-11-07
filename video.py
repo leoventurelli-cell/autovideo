@@ -332,15 +332,19 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
             clipes[termo] = None  # notícia: depois repete uma foto real que deu certo
             print(f"   ↺ '{termo}' (notícia: só foto real)")
             continue
+        if tipo == "ia" and config.PEXELS_API_KEY:  # primeiro um VÍDEO real de banco que mostre a cena
+            achado = _pexels_reserva(valor, usados, pasta / f"clipe_{i}.mp4")
+            if achado:
+                clipes[termo] = achado
+                continue
         if tipo == "ia" or not config.PEXELS_API_KEY:
             img = pasta / f"clipe_{i}.jpg"
             if _imagem_ia(f"{valor}, realistic cinematic photo, vertical composition" if P["orientacao"] == "portrait"
                           else f"{valor}, realistic cinematic photo", img, rapido=True):
                 clipes[termo] = img
                 print(f"   🎨 imagem IA {i + 1}/{len(unicos)}: '{valor}'")
-            else:  # IA fora do ar: vídeo real de banco da mesma cena
-                clipes[termo] = (_pexels_reserva(valor, usados, pasta / f"clipe_{i}.mp4")
-                                 if config.PEXELS_API_KEY else None)
+            else:  # IA fora do ar e nenhum vídeo de banco combinou: repete outra imagem depois
+                clipes[termo] = None
             continue
         caminho = pasta / f"clipe_{i}.mp4"
         try:
@@ -636,8 +640,96 @@ def _trilha_curiosidade(destino: Path, segundos: float) -> Path | None:
         return None
 
 
-TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica,
-           "fundo": _trilha_curiosidade}  # nome pedido no tema → gerador
+def _trilha_generica(destino: Path, segundos: float, bpm: float, acordes: list, baixos: list, arp_div: int,
+                     kick_cada: int, brilho: float, chimbal: float, rotulo: str) -> Path | None:
+    """Trilha feita na hora pelo FFmpeg (sem direito autoral): acordes com subida/descida suave (sem estalo),
+    baixo, arpejo dedilhado, batida e chimbal. Cada estilo muda andamento, tom e brilho."""
+    import subprocess
+    d = f"{max(20.0, segundos):.1f}"
+    fim = float(d) - 3
+    batida = 60.0 / bpm
+    comp = 4 * batida  # um compasso por acorde
+    n = len(acordes)
+    c = f"mod(floor(t/{comp:.4f}),{n})"
+
+    def escolhe(valores):
+        e = f"{valores[-1]}"
+        for k in range(n - 2, -1, -1):
+            e = f"if(eq({c},{k}),{valores[k]},{e})"
+        return e
+    n1, n2, n3 = (escolhe([a[j] for a in acordes]) for j in range(3))
+    b = escolhe(baixos)
+    m = f"mod(t,{comp:.4f})"
+    env = f"pow(sin(PI*{m}/{comp:.4f}),0.6)"
+    passo = batida / arp_div
+    k = f"mod(floor(t/{passo:.4f}),4)"
+    arp = f"if(eq({k},0),{n1},if(eq({k},1),{n2},if(eq({k},2),{n3},{n2})))*2"
+    p = f"mod(t,{passo:.4f})"
+    kb = kick_cada * batida
+    entradas = [
+        "-f", "lavfi", "-i", f"aevalsrc='{env}*(0.15*sin(2*PI*{n1}*{m})+0.12*sin(2*PI*{n2}*{m})+0.11*sin(2*PI*{n3}*{m}))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='{env}*0.33*sin(2*PI*{b}*{m})':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.15*(sin(2*PI*{arp}*{p})+{brilho}*sin(4*PI*{arp}*{p}))*exp(-{3.0 / passo:.2f}*{p})*(1-exp(-300*{p}))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='0.5*sin(2*PI*(45+70*exp(-28*mod(t,{kb:.4f})))*mod(t,{kb:.4f}))*exp(-9*mod(t,{kb:.4f}))':d={d}",
+        "-f", "lavfi", "-i", f"aevalsrc='{chimbal}*(random(0)*2-1)*exp(-45*mod(t-{batida / 2:.4f},{batida:.4f}))*gte(t,{batida / 2:.4f})':d={d}",
+    ]
+    filtro = ("[0]lowpass=f=2500,aecho=0.8:0.6:300|500:0.3|0.2[pad];[1]lowpass=f=300[bx];"
+              f"[2]lowpass=f=5000,aecho=0.8:0.7:{int(batida * 1000)}|{int(batida * 2000)}:0.3|0.15[arp];"
+              "[3]lowpass=f=200[kick];[4]highpass=f=6000[hat];"
+              f"[pad][bx][arp][kick][hat]amix=inputs=5:normalize=0,afade=t=in:d=2,afade=t=out:st={fim:.1f}:d=3,"
+              "loudnorm=I=-16,aformat=channel_layouts=stereo:sample_rates=44100")
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", *entradas, "-filter_complex", filtro, "-b:a", "96k",
+                        str(destino)], check=True, timeout=600)
+        print(f"   🎵 trilha de {rotulo} pronta")
+        return destino
+    except Exception as erro:
+        print(f"   ⚠️  trilha de {rotulo} falhou: {erro}")
+        return None
+
+
+def _trilha_misterio(destino: Path, segundos: float) -> Path | None:
+    """Mistério/assombração/OVNI: lenta e sombria (Ré menor - Si bemol - Sol menor - Lá)."""
+    return _trilha_generica(destino, segundos, 66, [(293.66, 349.23, 440.0), (233.08, 293.66, 349.23),
+                            (196.0, 233.08, 293.66), (220.0, 277.18, 329.63)], [73.42, 58.27, 98.0, 110.0],
+                            arp_div=1, kick_cada=2, brilho=0.15, chimbal=0.0, rotulo="mistério")
+
+
+def _trilha_noticia(destino: Path, segundos: float) -> Path | None:
+    """Política/notícia: pulso firme de telejornal (Mi menor - Dó - Sol - Ré)."""
+    return _trilha_generica(destino, segundos, 100, [(329.63, 392.0, 493.88), (261.63, 329.63, 392.0),
+                            (196.0, 246.94, 293.66), (293.66, 369.99, 440.0)], [82.41, 65.41, 98.0, 73.42],
+                            arp_div=2, kick_cada=1, brilho=0.35, chimbal=0.09, rotulo="notícia")
+
+
+def _trilha_ciencia(destino: Path, segundos: float) -> Path | None:
+    """Saúde/ciência/descoberta: leve e animada (Dó - Sol - Lá menor - Fá)."""
+    return _trilha_generica(destino, segundos, 116, [(261.63, 329.63, 392.0), (196.0, 246.94, 293.66),
+                            (220.0, 261.63, 329.63), (174.61, 220.0, 261.63)], [65.41, 98.0, 110.0, 87.31],
+                            arp_div=4, kick_cada=2, brilho=0.5, chimbal=0.07, rotulo="ciência")
+
+
+ESTILOS_MUSICA = [  # assunto do vídeo → trilha (a primeira que bater)
+    ("misterio", r"assombr|fantasma|esp[íi]rito|terror|maldi|ovni|alien|extraterr|disco voador|mist[ée]rio|"
+                 r"enigma|lenda|abandonad|proibid|paranormal|dem[ôo]nio|bruxa|morte|vida ap[óo]s"),
+    ("noticia", r"pol[íi]tic|elei[çc]|presidente|congresso|senado|stf|governo|minist|guerra|trump|lula|"
+                r"crise|tarifa|imposto|economia|greve"),
+    ("ciencia", r"sa[úu]de|cura|vacina|rem[ée]dio|tratamento|c[âa]ncer|ci[êe]ncia|cientista|descobert|nasa|"
+                r"espa[çc]o|planeta|tecnologia|c[ée]rebro|corpo"),
+]
+
+
+def _estilo_musica(roteiro: dict) -> str:
+    import re
+    texto = " ".join(str(roteiro.get(k, "")) for k in ("assunto", "titulo", "roteiro"))[:3000]
+    for estilo, padrao in ESTILOS_MUSICA:
+        if re.search(padrao, texto, re.I):
+            return estilo
+    return "fundo"
+
+
+TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica, "fundo": _trilha_curiosidade,
+           "misterio": _trilha_misterio, "noticia": _trilha_noticia, "ciencia": _trilha_ciencia}  # nome → gerador
 
 
 def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
@@ -682,8 +774,10 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         trilha = TRILHAS[roteiro["musica"]](pasta / f"trilha_{roteiro['musica']}.mp3", total + 2)
         if trilha:
             musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.22)
-    if not musicas:  # sem trilha pedida: fundo lo-fi próprio (sem direito autoral) em todo vídeo
-        trilha = _trilha_curiosidade(pasta / "trilha_fundo.mp3", total + 2)
+    if not musicas:  # sem trilha pedida: trilha própria (sem direito autoral) escolhida pelo assunto do vídeo
+        estilo = _estilo_musica(roteiro)
+        trilha = TRILHAS[estilo](pasta / f"trilha_{estilo}.mp3", total + 2) or _trilha_curiosidade(
+            pasta / "trilha_fundo.mp3", total + 2)
         if trilha:
             musicas, volume_musica = [trilha], max(config.VOLUME_MUSICA, 0.18)
     entradas = ["-f", "concat", "-safe", "0", "-i", lista, "-i", audio]
