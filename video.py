@@ -322,7 +322,11 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
             if achado:
                 clipes[termo] = achado
                 continue
-        if tipo in ("wiki", "commons"):
+        if tipo == "wiki":  # nome real sem foto livre: NUNCA desenha com IA (seria um rosto falso de pessoa real)
+            clipes[termo] = (_pexels_reserva(valor, usados, pasta / f"clipe_{i}.mp4")
+                             if config.PEXELS_API_KEY and not so_reais else None)
+            continue
+        if tipo == "commons":
             tipo = "ia"  # sem foto livre: desenha a cena
         if so_reais:
             clipes[termo] = None  # notícia: depois repete uma foto real que deu certo

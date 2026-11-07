@@ -319,6 +319,16 @@ def main():
     if exata and not longo:  # pedido manual com o texto já escrito e conferido: narra exatamente isso
         r["roteiro"] = exata.group(1).strip()
         print("   📝 narração exata do pedido")
+    elif exata and longo:  # vídeo longo com o texto já escrito e conferido: "[Título] texto [Título] texto..."
+        blocos = re.findall(r"\[([^\]]{2,60})\]\s*([^\[]+)", exata.group(1))
+        if len(blocos) >= 3:
+            antigas = r.get("partes") or [{"cenas": [r.get("assunto", "nature")]}]
+            r["partes"] = [{"titulo": t.strip(), "texto": x.strip(),
+                            "cenas": antigas[min(i, len(antigas) - 1)].get("cenas") or [r.get("assunto", "nature")]}
+                           for i, (t, x) in enumerate(blocos)]
+            r["roteiro"] = "\n\n".join(p["texto"] for p in r["partes"])
+            r["cenas"] = [c for p in r["partes"] for c in p["cenas"]]
+            print(f"   📝 narração exata do pedido: {len(blocos)} partes")
     r = gerador_roteiro.textos_virais(r, args.formato, tema)
     if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
         try:
@@ -335,7 +345,7 @@ def main():
     for chave, campo in (("TÍTULO EXATO", "titulo"), ("CAPA", "texto_capa"),
                          ("DESCRIÇÃO EXATA", "descricao"), ("LEGENDA EXATA", "legenda_tiktok")):
         m = re.search(chave + r":\s*(.+?)\s*" + _chaves, tema or "", re.S)
-        if m and m.group(1).strip() and not longo:  # pedido manual com título/capa/descrição já conferidos
+        if m and m.group(1).strip():  # pedido manual com título/capa/descrição já conferidos
             r[campo] = m.group(1).strip()
             print(f"   ✏️  {campo} exato do pedido: {r[campo][:60]}")
     r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
