@@ -1859,7 +1859,8 @@
   "id": "video-20261106-2150-129",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261106-2150-129/operacao-prato-o-misterio-das-luzes-de-c.mp4",
   "capa": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261106-2150-129/operacao-prato-o-misterio-das-luzes-de-c-capa.jpg",
-  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/42318797073"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/42318797073",
+  "youtube": "https://youtu.be/e4LQYSgOC8w"
  },
  {
   "data": "2026-11-06T21:50:58-03:00",
@@ -1880,6 +1881,7 @@
   "celular": "tiktok/video-20261106-2150-129-short.mp4",
   "manual": true,
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261106-2150-129/operacao-prato-o-misterio-das-luzes-de-c-short.mp4",
-  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/42318797073"
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/42318797073",
+  "youtube": "https://youtube.com/shorts/7v31e80cNPo"
  }
 ]
