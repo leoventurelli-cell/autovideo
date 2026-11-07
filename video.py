@@ -136,7 +136,7 @@ def _normalizar_foto(arquivo: Path):
 # apelidos que na Wikipédia são outra coisa (ex.: "Lula" em português é o molusco)
 APELIDOS = {"lula": "Luiz Inácio Lula da Silva", "bolsonaro": "Jair Bolsonaro", "jair bolsonaro": "Jair Bolsonaro",
             "moraes": "Alexandre de Moraes", "xandão": "Alexandre de Moraes", "dilma": "Dilma Rousseff",
-            "pentágono": "The Pentagon", "pentagono": "The Pentagon", "fhc": "Fernando Henrique Cardoso", "temer": "Michel Temer", "alckmin": "Geraldo Alckmin",
+            "colares": "Colares (Pará)", "ilha de colares": "Colares (Pará)", "pentágono": "The Pentagon", "pentagono": "The Pentagon", "fhc": "Fernando Henrique Cardoso", "temer": "Michel Temer", "alckmin": "Geraldo Alckmin",
             "flávio": "Flávio Bolsonaro", "eduardo bolsonaro": "Eduardo Bolsonaro", "tarcísio": "Tarcísio de Freitas",
             "trump": "Donald Trump", "milei": "Javier Milei", "pelé": "Pelé", "neymar": "Neymar", "stf": "Supremo Tribunal Federal",
             "pf": "Polícia Federal (Brasil)", "tse": "Tribunal Superior Eleitoral"}
@@ -178,8 +178,8 @@ def _midia_commons(busca: str, pasta: Path, i: int) -> Path | None:
     import html
     import re as _re
     palavras = [p for p in _re.findall(r"\w{3,}", _sem_acento(busca)) if p not in _VAZIAS_BUSCA]
-    if not palavras:
-        return None
+    if len(palavras) < 2:
+        return None  # uma palavra só é vaga demais (ex.: 'Colares' trazia a cidade de Portugal)
     minimo = len(palavras) if len(palavras) <= 2 else -(-len(palavras) // 2)
     try:
         r = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
@@ -267,6 +267,35 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
     return False
 
 
+_VAZIAS_PEXELS = {"the", "and", "with", "over", "from", "into", "onto", "for", "that", "this", "while", "its",
+                  "his", "her", "their", "realistic", "cinematic", "photo", "vertical", "composition", "scene",
+                  "showing", "mysterious", "glowing", "bright", "dramatic", "image", "view"}
+
+
+def _pexels_reserva(descricao: str, usados: set, destino: Path) -> Path | None:
+    """A IA de imagem está fora do ar: usa um VÍDEO real de banco com as palavras principais da cena
+    (ex.: 'night vigil bonfire villagers' → 'night vigil bonfire'), em vez de repetir outra imagem."""
+    import re as _re
+    palavras = [w for w in _re.findall(r"[a-z]{3,}", _sem_acento(descricao)) if w not in _VAZIAS_PEXELS]
+    for termo in dict.fromkeys([" ".join(palavras[:3]), " ".join(palavras[:2]), " ".join(palavras[-2:])]):
+        if not termo:
+            continue
+        try:
+            link = _buscar_pexels(termo, usados, exigir_relevancia=True)
+            if not link:
+                continue
+            with requests.get(link, stream=True, timeout=180) as r:
+                r.raise_for_status()
+                with open(destino, "wb") as f:
+                    for bloco in r.iter_content(1 << 20):
+                        f.write(bloco)
+            print(f"   🎞️  vídeo de banco no lugar da IA: '{termo}'")
+            return destino
+        except Exception as erro:
+            print(f"   banco de vídeo falhou para '{termo}' ({erro})")
+    return None
+
+
 def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict[str, Path | None]:
     """Uma mídia por termo (sem repetir termos):
        'wiki:Nome'  → foto real da Wikimedia (pessoas, lugares, objetos famosos)
@@ -305,8 +334,9 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
                           else f"{valor}, realistic cinematic photo", img, rapido=True):
                 clipes[termo] = img
                 print(f"   🎨 imagem IA {i + 1}/{len(unicos)}: '{valor}'")
-            else:
-                clipes[termo] = None
+            else:  # IA fora do ar: vídeo real de banco da mesma cena
+                clipes[termo] = (_pexels_reserva(valor, usados, pasta / f"clipe_{i}.mp4")
+                                 if config.PEXELS_API_KEY else None)
             continue
         caminho = pasta / f"clipe_{i}.mp4"
         try:
