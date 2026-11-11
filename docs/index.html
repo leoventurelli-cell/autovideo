@@ -129,12 +129,53 @@
   .folha .lin .btn{flex:1}
   @media(max-width:520px){.modal .previa{flex-direction:column}.modal .previa video{width:100%;max-width:220px;align-self:center}}
 </style>
+<style>
+  html.trancado main{display:none}
+  #portao{display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;place-items:center;padding:16px}
+  html.trancado #portao{display:grid}
+  #portao form{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
+  #portao input{padding:12px 14px;border-radius:12px;border:1px solid var(--borda);background:var(--bg);color:var(--texto);font-family:inherit;font-size:15px}
+  #portao .erro{color:var(--vermelho);font-size:13px;min-height:18px}
+</style>
+<script>
+  /* Acesso só pra você: login e senha conferidos por hash. */
+  window.AV_SAL = '21ba09bb4e1b70c2';
+  window.AV_HASH = 'fd8d5b5a0e22ebf36cd6cfc5c930f459bd6dedb86fb9d27b81c1d1cf79304e77';
+  try { if (localStorage.getItem('av_acesso') !== window.AV_HASH) document.documentElement.classList.add('trancado'); }
+  catch { document.documentElement.classList.add('trancado'); }
+</script>
 </head>
 <body>
+<div id="portao">
+  <form id="portaoForm" autocomplete="on">
+    <div class="logo" style="align-self:center">▶</div>
+    <b style="text-align:center;font-size:18px">AutoVídeo · Painel</b>
+    <input id="portaoLogin" name="username" placeholder="Login" autocomplete="username" autocapitalize="off" required>
+    <input id="portaoSenha" name="password" type="password" placeholder="Senha" autocomplete="current-password" required>
+    <button class="btn amarelo" type="submit">Entrar</button>
+    <div class="erro" id="portaoErro"></div>
+  </form>
+</div>
+<script>
+  document.getElementById('portaoForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const l = document.getElementById('portaoLogin').value.trim().toLowerCase();
+    const s = document.getElementById('portaoSenha').value;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(window.AV_SAL + '|' + l + '|' + s));
+    const h = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (h === window.AV_HASH) {
+      try { localStorage.setItem('av_acesso', h); } catch {}
+      document.documentElement.classList.remove('trancado');
+    } else {
+      document.getElementById('portaoErro').textContent = 'Login ou senha incorretos.';
+    }
+  });
+  function sairDoPainel(){ try { localStorage.removeItem('av_acesso'); } catch {} location.reload(); }
+</script>
 <main>
   <header>
     <div class="logo">▶</div>
-    <div><h1>AutoVídeo</h1><p>Vídeos curtos feitos por IA · download e publicação automática</p></div>
+    <div><h1>AutoVídeo</h1><p>Vídeos curtos feitos por IA · download e publicação automática · <a href="#" onclick="sairDoPainel();return false">Sair</a></p></div>
   </header>
 
   <!-- aparece quando o TikTok devolve o código de autorização -->
