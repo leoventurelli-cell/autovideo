@@ -2965,5 +2965,27 @@
   "id": "video-20261115-1327-201",
   "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261115-1327-201/geleira-da-antartida-o-que-se-sabe-sobre.mp4",
   "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/43735073121"
+ },
+ {
+  "data": "2026-11-15T14:54:38-03:00",
+  "titulo": "Terra: O que acontece se ela PARAR por 1 segundo?",
+  "assunto": "E se a Terra parasse de girar por um segundo?",
+  "legenda": "E se a Terra parasse por 1 segundo? 🌎\nO que você sentiria?\n\n#curiosidades #fyp #TerraParada #MistériosReais #Ciência #MundoMisterioso",
+  "segundos": 60,
+  "formato": "curto",
+  "textos": {
+   "titulo_youtube": "Terra: O que acontece se ela PARAR por 1 segundo?",
+   "descricao_youtube": "Terra parada por um segundo? Descubra o que realmente aconteceria em poucos instantes 🌍\n\nA inércia da rotação mantém tudo em movimento; ao interromper, o ar gera ventos de milhares de km/h, os oceanos criam ondas gigantes e micro‑tremores surgem ao longo do equador. Experimentos como o Gravity Probe B já mediram variações minúsculas na rotação da Terra.\n\nVocê acha que sentiria o chão tremer? 🤔\n\nCurta, comente e siga o canal Curiosidades Ocultas para mais mistérios reais!\n\n📷 Fotos (Wikimedia Commons):\n• Earth: EUMETSAT (Attribution, Wikimedia Commons)\n• International Space Station: NASA (Public domain, Wikimedia Commons)\n• Gravity Probe B: NASA/MSFC (Public domain, Wikimedia Commons)\n\n#Curiosidades #Mistérios #Ciência #shorts",
+   "legenda_tiktok": "E se a Terra parasse por 1 segundo? 🌎\nO que você sentiria?",
+   "hashtags_tiktok": "#curiosidades #fyp #TerraParada #MistériosReais #Ciência #MundoMisterioso",
+   "tags_youtube": "terra parada, efeitos da rotação da terra, microtremores, ventos de alta velocidade, ondas gigantes oceânicas, gravity probe b, ciência dos planetas, mistérios reais, curiosidades científicas, fenômenos naturais, documentário curto, tik tok science, youtube shorts"
+  },
+  "celular": "tiktok/video-20261115-1453-202.mp4",
+  "youtube": "https://youtube.com/shorts/g7Zopws1iiY",
+  "tiktok": "ERRO",
+  "curiosidade": true,
+  "id": "video-20261115-1453-202",
+  "mp4": "https://github.com/leoventurelli-cell/autovideo/releases/download/video-20261115-1453-202/terra-o-que-acontece-se-ela-parar-por-1.mp4",
+  "execucao": "https://github.com/leoventurelli-cell/autovideo/actions/runs/43743408113"
  }
 ]
