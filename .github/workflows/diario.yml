@@ -6,7 +6,7 @@ on:
     # "acorda" a cada 20 minutos e o passo "decidir" vê se já passou da hora e se o vídeo
     # do dia ainda não saiu: Short a partir das 09:00 e vídeo longo a partir das 18:00 (Brasília).
     # Quando não há nada a fazer, a execução termina em segundos.
-    - cron: "7,27,47 12-23 * * *"
+    - cron: "7,27,47 9-23 * * *"   # 06h às 20h59 de Brasília (o radar começa às 06h)
     - cron: "7,27 0-2 * * *"
   workflow_dispatch:   # botão "Run workflow" para rodar na hora
     inputs:
@@ -57,8 +57,11 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           HORA_SHORT: "09:00"
           HORA_CURIOSO: "15:00"   # Short de curiosidade (perguntas que todo mundo quer saber)
-          RADAR: "11:30,13:30,20:30,22:00"   # radar: Short extra se um assunto estiver explodindo (máx. 2/dia)
-          RADAR_MAX: "2"
+          # radar de notícia bombástica: olha de hora em hora, das 06h às 23h (nunca entre meia-noite e 6h).
+          # Short extra só se o assunto estiver explodindo E 2 veículos grandes noticiarem. Máximo 1 por dia.
+          # Para DESLIGAR o radar: troque RADAR_MAX para "0".
+          RADAR: "06:00,07:00,08:00,09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00,18:00,19:00,20:00,21:00,22:00,23:00"
+          RADAR_MAX: "1"
           HORA_LONGO: "18:00"
         run: |
           python3 - <<'PY'
@@ -114,7 +117,7 @@ jobs:
                   radar = {"feitos": [], "videos": 0}
               if int(radar.get("videos", 0)) < int(os.environ["RADAR_MAX"]):
                   for s in os.environ["RADAR"].split(","):
-                      if s not in radar.get("feitos", []) and hora(s) <= agora < hora(s) + timedelta(minutes=90):
+                      if s not in radar.get("feitos", []) and hora(s) <= agora < hora(s) + timedelta(minutes=60):
                           formato, tipo, slot = "curto", "alta", s
                           break
           atraso = ""

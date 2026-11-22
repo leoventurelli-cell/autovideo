@@ -228,21 +228,78 @@ def _volume(texto: str) -> int:
         return 0
 
 
+# veículos grandes que precisam noticiar o assunto (pelo menos 2 diferentes) para virar Short extra
+GRANDES_VEICULOS = {"g1": "g1", "globo": "g1", "uol": "UOL", "folha": "Folha", "bbc": "BBC", "estad": "Estadão",
+                    "cnn brasil": "CNN Brasil", "o globo": "O Globo", "veja": "Veja", "terra": "Terra",
+                    "metr[oó]poles": "Metrópoles", "r7": "R7", "band": "Band", "exame": "Exame"}
+# além de tragédia/morte/crime: nada de acusação contra alguém no Short extra
+ACUSACAO = ("acusa", "acusad", "denúncia", "denuncia", "investigad", "investigaç", "suspeit", "escândalo",
+            "escandalo", "polícia", "policia", "prisão", "prisao", "condenad", "réu ", "indiciad", "golpe",
+            "fraude", "corrupç", "assédio", "assedio", "agress", "ataque", "guerra", "bomba", "explos")
+
+
+def _veiculo(fonte: str) -> str | None:
+    f = str(fonte or "").lower()
+    for chave, nome in GRANDES_VEICULOS.items():
+        if re.search(chave, f):
+            return nome
+    return None
+
+
+def _confirmacao(busca: str, manchetes: list[str]) -> tuple[set[str], list[str]]:
+    """Quais veículos grandes noticiaram o assunto (manchetes do Trends + Google Notícias das últimas 24 h)."""
+    veiculos, textos = set(), []
+    for m in manchetes:
+        fonte = re.search(r"\(([^()]+)\)\s*$", m)
+        nome = _veiculo(fonte.group(1)) if fonte else None
+        if nome:
+            veiculos.add(nome)
+            textos.append(m)
+    try:
+        r = requests.get(_GN + requests.utils.quote(f'"{busca}" when:1d'), headers=CAB, timeout=30)
+        for item in ET.fromstring(r.content).iter("item"):
+            fonte = item.findtext("source") or ""
+            nome = _veiculo(fonte)
+            if nome:
+                veiculos.add(nome)
+                textos.append(f"{(item.findtext('title') or '').strip()} ({fonte})")
+    except Exception as erro:
+        print(f"   Google Notícias indisponível para '{busca}' ({erro})")
+    return veiculos, textos[:6]
+
+
 def radar(usados: list[str]) -> dict | None:
-    """Radar fora do horário: só devolve tema se um assunto estiver EXPLODINDO agora (100 mil+ buscas),
-    for de curiosidade, sem tragédia e sem repetir vídeo recente."""
-    fortes = [g for g in google_trends(40) if _volume(g["volume"]) >= RADAR_MINIMO
-              and _sem_violencia(g["busca"], *g["manchetes"])]
-    print("📡 Radar: " + (", ".join(f"{g['busca']} ({g['volume']})" for g in fortes) or "nada passou de 100 mil buscas"))
+    """Radar de notícia bombástica: só devolve tema se um assunto estiver EXPLODINDO agora
+    (100 mil+ buscas no Google) E for noticiado por pelo menos 2 veículos grandes; nunca tragédia,
+    morte, crime ou acusação contra alguém; sem repetir vídeo recente."""
+    seguros = [g for g in google_trends(40) if _volume(g["volume"]) >= RADAR_MINIMO
+               and not _tragico(g["busca"], *g["manchetes"]) and not _violento(g["busca"], *g["manchetes"])
+               and not any(p in " ".join([g["busca"], *g["manchetes"]]).lower() for p in ACUSACAO)]
+    fortes = []
+    for g in seguros:
+        veiculos, textos = _confirmacao(g["busca"], g["manchetes"])
+        if any(_tragico(t) or _violento(t) or any(p in t.lower() for p in ACUSACAO) for t in textos):
+            print(f"   '{g['busca']}': manchetes falam de tragédia/crime/acusação; fora")
+            continue
+        print(f"   '{g['busca']}' ({g['volume']}): noticiado por {', '.join(sorted(veiculos)) or 'nenhum veículo grande'}")
+        if len(veiculos) >= 2:
+            fortes.append({**g, "manchetes": textos})
+    print("📡 Radar: " + (", ".join(f"{g['busca']} ({g['volume']})" for g in fortes)
+                         or "nada explodindo com 2 veículos grandes confirmando"))
     if not fortes:
         return None
     escolha = escolher_tema("curto", usados, google=fortes)
     if not escolha:
         return None
     alvo = _palavras(f"{escolha.get('tendencia', '')} {escolha.get('tema', '')}")
-    if not any(alvo & _palavras(g["busca"] + " " + " ".join(g["manchetes"])) for g in fortes):
+    confirmado = [g for g in fortes if alvo & _palavras(g["busca"] + " " + " ".join(g["manchetes"]))]
+    if not confirmado:
         print(f"   o tema escolhido ('{escolha.get('tema')}') não é um dos assuntos explodindo; sem vídeo extra")
         return None
+    # o roteiro só pode afirmar o que essas manchetes confirmam (sem inventar números)
+    escolha["manchetes"] = confirmado[0]["manchetes"]
+    escolha["angulo"] = ((escolha.get("angulo") or "") + " Use só fatos que estas manchetes confirmam; "
+                         "não cite nenhum número, valor ou porcentagem que não esteja nelas.").strip()
     return escolha
 
 

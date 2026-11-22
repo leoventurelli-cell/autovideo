@@ -1,7 +1,7 @@
 name: Teste (sem publicar)
 
-# Roda só na cópia "melhorias-retencao": gera um Short SEM publicar e guarda o vídeo
-# e um mosaico das cenas na pasta teste_saida/ deste mesmo branch. Não mexe no main.
+# Roda só na cópia "melhorias-retencao". NADA é publicado e o main não é tocado.
+# Os resultados (vídeos, mosaicos e registros) ficam na pasta teste_saida/ deste branch.
 on:
   push:
     branches: [melhorias-retencao]
@@ -18,9 +18,22 @@ concurrency:
 jobs:
   teste:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        caso: [ovni, reserva, radar]
     env:
       TZ: America/Sao_Paulo
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      NICHO: ${{ vars.NICHO }}
+      CANAL: ${{ vars.CANAL }}
+      VOZ: ${{ vars.VOZ }}
+      PUBLICAR_YOUTUBE: "nao"
+      PUBLICAR_TIKTOK: "nao"
+      FORMATO: curto
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +43,7 @@ jobs:
           cache: pip
 
       - name: Instalar FFmpeg
+        if: matrix.caso != 'radar'
         timeout-minutes: 10
         run: |
           if ! command -v ffmpeg >/dev/null; then
@@ -42,33 +56,31 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
 
-      - name: Gerar Short de teste (sem publicar)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          NICHO: ${{ vars.NICHO }}
-          CANAL: ${{ vars.CANAL }}
-          VOZ: ${{ vars.VOZ }}
-          PUBLICAR_YOUTUBE: "nao"
-          PUBLICAR_TIKTOK: "nao"
-          FORMATO: curto
+      - name: Rodar o teste
         run: |
           touch /tmp/marca
-          python main.py --formato curto --sem-publicar \
-            --tema "Os vídeos de OVNI da Marinha dos EUA: Gimbal, GoFast e FLIR1" 2>&1 | tee log.txt
+          case "${{ matrix.caso }}" in
+            ovni)    python main.py --formato curto --sem-publicar \
+                       --tema "Os vídeos de OVNI da Marinha dos EUA: Gimbal, GoFast e FLIR1" ;;
+            reserva) # força a falta de imagens para ver a troca de tema e o aviso no final
+                     MIN_IMAGENS=99 TESTE_RESERVA=sim python main.py --formato curto --sem-publicar ;;
+            radar)   python -c "import tendencias, json; e = tendencias.radar([]); print('RESULTADO DO RADAR:', json.dumps(e, ensure_ascii=False) if e else 'sem Short extra agora')" ;;
+          esac 2>&1 | tee log.txt
 
-      - name: Guardar vídeo, mosaico e registro
+      - name: Guardar resultado
         if: always()
         run: |
+          C=${{ matrix.caso }}
           mkdir -p teste_saida
-          cp log.txt teste_saida/registro.txt 2>/dev/null || true
-          MP4=$(find saida -name "*.mp4" -newer /tmp/marca ! -name "*-short.mp4" 2>/dev/null | head -1)
+          cp log.txt "teste_saida/registro_$C.txt" 2>/dev/null || true
+          MP4=$(find saida -name "*.mp4" -newer /tmp/marca ! -name "*-short.mp4" -printf "%T@ %p\n" 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)
           if [ -n "$MP4" ]; then
-            ffmpeg -y -loglevel error -i "$MP4" -c copy teste_saida/short_teste.mp4
-            ffmpeg -y -loglevel error -i "$MP4" -vf "fps=1/2,scale=216:-1,tile=6x5:padding=4" -frames:v 1 teste_saida/mosaico.jpg
+            ffmpeg -y -loglevel error -i "$MP4" -c copy "teste_saida/short_$C.mp4"
+            ffmpeg -y -loglevel error -i "$MP4" -vf "fps=1/2,scale=216:-1,tile=6x5:padding=4" -frames:v 1 "teste_saida/mosaico_$C.jpg"
           fi
           git config user.name "autovideo-bot"
           git config user.email "autovideo-bot@users.noreply.github.com"
           git add -f teste_saida
-          git diff --cached --quiet || (git commit -m "resultado do teste" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "resultado do teste ($C)"
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep 5; done

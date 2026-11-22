@@ -7,6 +7,7 @@ Uso:
     python main.py --tema "buracos negros"
 """
 import argparse
+import random
 import json
 import os
 import re
@@ -191,6 +192,15 @@ def _curiosidade() -> bool:
     return os.getenv("TIPO") == "curiosidade"
 
 
+# temas com muitas fotos reais, usados quando o Short do dia sai com poucas imagens diferentes
+TEMAS_RESERVA = [
+    "Criaturas reais do fundo do mar que parecem de outro planeta (use fotos reais desses animais)",
+    "Animais reais com habilidades inacreditáveis, comprovadas pela ciência (use fotos reais)",
+    "Lugares misteriosos que existem de verdade no planeta, com nome e país (use fotos reais desses lugares)",
+    "Um caso histórico real e famoso registrado em fotografias antigas (use as fotos reais do caso)",
+]
+
+
 def _alta() -> bool:
     return os.getenv("TIPO") == "alta"  # radar: Short extra quando um assunto explode fora do horário
 
@@ -313,69 +323,105 @@ def main():
         except Exception:
             traceback.print_exc()
 
-    print(f"🧠 Escrevendo o roteiro ({args.formato})...")
-    r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
-    exata = re.search(r"NARRAÇÃO EXATA:\s*(.+?)\s*(?:CENAS FIXAS:|$)", tema or "", re.S)
-    if exata and not longo:  # pedido manual com o texto já escrito e conferido: narra exatamente isso
-        r["roteiro"] = exata.group(1).strip()
-        print("   📝 narração exata do pedido")
-    elif exata and longo:  # vídeo longo com o texto já escrito e conferido: "[Título] texto [Título] texto..."
-        blocos = re.findall(r"\[([^\]]{2,60})\]\s*([^\[]+)", exata.group(1))
-        if len(blocos) >= 3:
-            antigas = r.get("partes") or [{"cenas": [r.get("assunto", "nature")]}]
-            r["partes"] = [{"titulo": t.strip(), "texto": x.strip(),
-                            "cenas": antigas[min(i, len(antigas) - 1)].get("cenas") or [r.get("assunto", "nature")]}
-                           for i, (t, x) in enumerate(blocos)]
-            r["roteiro"] = "\n\n".join(p["texto"] for p in r["partes"])
-            r["cenas"] = [c for p in r["partes"] for c in p["cenas"]]
-            print(f"   📝 narração exata do pedido: {len(blocos)} partes")
-    r = gerador_roteiro.textos_virais(r, args.formato, tema)
-    if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
+    def produzir(tema, tendencia):
+        video.CREDITOS.clear()
+        print(f"🧠 Escrevendo o roteiro ({args.formato})...")
+        r = gerador_roteiro.gerar_longo(tema, historico) if longo else gerador_roteiro.gerar(tema, historico)
+        exata = re.search(r"NARRAÇÃO EXATA:\s*(.+?)\s*(?:CENAS FIXAS:|$)", tema or "", re.S)
+        if exata and not longo:  # pedido manual com o texto já escrito e conferido: narra exatamente isso
+            r["roteiro"] = exata.group(1).strip()
+            print("   📝 narração exata do pedido")
+        elif exata and longo:  # vídeo longo com o texto já escrito e conferido: "[Título] texto [Título] texto..."
+            blocos = re.findall(r"\[([^\]]{2,60})\]\s*([^\[]+)", exata.group(1))
+            if len(blocos) >= 3:
+                antigas = r.get("partes") or [{"cenas": [r.get("assunto", "nature")]}]
+                r["partes"] = [{"titulo": t.strip(), "texto": x.strip(),
+                                "cenas": antigas[min(i, len(antigas) - 1)].get("cenas") or [r.get("assunto", "nature")]}
+                               for i, (t, x) in enumerate(blocos)]
+                r["roteiro"] = "\n\n".join(p["texto"] for p in r["partes"])
+                r["cenas"] = [c for p in r["partes"] for c in p["cenas"]]
+                print(f"   📝 narração exata do pedido: {len(blocos)} partes")
+        r = gerador_roteiro.textos_virais(r, args.formato, tema)
+        if gerador_roteiro.modo_noticia(tema):  # notícia sobre pessoas reais: confere tudo com os fatos do pedido
+            try:
+                r = gerador_roteiro.revisar_noticia(r, tema)
+            except RuntimeError as erro:
+                if args.tema:  # pedido feito à mão: não publica e avisa
+                    raise
+                # horário automático: em vez de ficar sem vídeo, troca por um mistério forte
+                print(f"::warning title=Notícia descartada::{erro} Trocando por um tema de mistério.")
+                tema, tendencia = None, None
+                r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
+                r = gerador_roteiro.textos_virais(r, args.formato, None)
+        _chaves = r"(?:TÍTULO EXATO:|CAPA:|DESCRIÇÃO EXATA:|LEGENDA EXATA:|NARRAÇÃO EXATA:|CENAS FIXAS:|$)"
+        for chave, campo in (("TÍTULO EXATO", "titulo"), ("CAPA", "texto_capa"),
+                             ("DESCRIÇÃO EXATA", "descricao"), ("LEGENDA EXATA", "legenda_tiktok")):
+            m = re.search(chave + r":\s*(.+?)\s*" + _chaves, tema or "", re.S)
+            if m and m.group(1).strip():  # pedido manual com título/capa/descrição já conferidos
+                r[campo] = m.group(1).strip()
+                print(f"   ✏️  {campo} exato do pedido: {r[campo][:60]}")
+        r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
+        if gerador_roteiro.modo_noticia(tema) and "ILUSTRAÇÃO DE IA" not in tema.upper():
+            r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
+        fixas = re.search(r"CENAS FIXAS:\s*(.+)$", tema or "", re.S)
+        if fixas and not longo:  # pedido manual com as imagens exatas, na ordem (separadas por |)
+            r["cenas"] = [c.strip(" .") for c in fixas.group(1).split("|") if c.strip(" .")][:12] or r["cenas"]
+            print(f"   🖼️  cenas fixas do pedido: {r['cenas']}")
+        if tema and "MÚSICA DE PERIGO" in tema.upper():
+            r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
+        elif tema and ("MÚSICA PSICODÉLICA" in tema.upper() or "MÚSICA MÍSTICA" in tema.upper()):
+            r["musica"] = "psicodelica"  # trilha psicodélica/mística feita na hora (video._trilha_psicodelica)
+        if tendencia:
+            r["tendencia"] = tendencia
+        print(f"   → {r['titulo']}")
+
+        pasta = config.PASTA_SAIDA / f"{datetime.now():%Y-%m-%d_%H%M}_{_slug(r['assunto'])}"
+        pasta.mkdir(parents=True, exist_ok=True)
+        (pasta / "roteiro.json").write_text(json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        print("🎙️  Gravando a narração...")
+        audio = pasta / "narracao.mp3"
+        inicios = None
+        if longo:
+            palavras, inicios = voz.gerar_partes([p["texto"] for p in r["partes"]], audio)
+        else:
+            palavras = voz.gerar(r["roteiro"], audio)
+
         try:
-            r = gerador_roteiro.revisar_noticia(r, tema)
-        except RuntimeError as erro:
-            if args.tema:  # pedido feito à mão: não publica e avisa
-                raise
-            # horário automático: em vez de ficar sem vídeo, troca por um mistério forte
-            print(f"::warning title=Notícia descartada::{erro} Trocando por um tema de mistério.")
-            tema, tendencia = None, None
-            r = gerador_roteiro.gerar_longo(None, historico) if longo else gerador_roteiro.gerar(None, historico)
-            r = gerador_roteiro.textos_virais(r, args.formato, None)
-    _chaves = r"(?:TÍTULO EXATO:|CAPA:|DESCRIÇÃO EXATA:|LEGENDA EXATA:|NARRAÇÃO EXATA:|CENAS FIXAS:|$)"
-    for chave, campo in (("TÍTULO EXATO", "titulo"), ("CAPA", "texto_capa"),
-                         ("DESCRIÇÃO EXATA", "descricao"), ("LEGENDA EXATA", "legenda_tiktok")):
-        m = re.search(chave + r":\s*(.+?)\s*" + _chaves, tema or "", re.S)
-        if m and m.group(1).strip():  # pedido manual com título/capa/descrição já conferidos
-            r[campo] = m.group(1).strip()
-            print(f"   ✏️  {campo} exato do pedido: {r[campo][:60]}")
-    r = gerador_roteiro.revisar_cenas(r)  # cada foto tem que mostrar o que está sendo dito naquele trecho
-    if gerador_roteiro.modo_noticia(tema) and "ILUSTRAÇÃO DE IA" not in tema.upper():
-        r["so_fotos_reais"] = True  # notícia: só fotos reais do assunto, nada de imagem genérica
-    fixas = re.search(r"CENAS FIXAS:\s*(.+)$", tema or "", re.S)
-    if fixas and not longo:  # pedido manual com as imagens exatas, na ordem (separadas por |)
-        r["cenas"] = [c.strip(" .") for c in fixas.group(1).split("|") if c.strip(" .")][:12] or r["cenas"]
-        print(f"   🖼️  cenas fixas do pedido: {r['cenas']}")
-    if tema and "MÚSICA DE PERIGO" in tema.upper():
-        r["musica"] = "perigo"  # trilha de suspense feita na hora (video._trilha_perigo)
-    elif tema and ("MÚSICA PSICODÉLICA" in tema.upper() or "MÚSICA MÍSTICA" in tema.upper()):
-        r["musica"] = "psicodelica"  # trilha psicodélica/mística feita na hora (video._trilha_psicodelica)
-    if tendencia:
-        r["tendencia"] = tendencia
-    print(f"   → {r['titulo']}")
+            final = video.montar(r, audio, palavras, pasta, formato=args.formato, inicios_partes=inicios)
+        except video.PoucasImagens as erro:
+            # guarda o jeito de montar ESTA versão mesmo com poucas imagens (se nenhum outro tema der certo)
+            erro.refazer = lambda: video.montar(r, audio, palavras, pasta, formato=args.formato,
+                                                inicios_partes=inicios, aceitar_poucas=True)
+            erro.r, erro.pasta, erro.inicios, erro.tendencia = r, pasta, inicios, tendencia
+            raise
+        return r, pasta, final, inicios, tendencia
 
-    pasta = config.PASTA_SAIDA / f"{datetime.now():%Y-%m-%d_%H%M}_{_slug(r['assunto'])}"
-    pasta.mkdir(parents=True, exist_ok=True)
-    (pasta / "roteiro.json").write_text(json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    print("🎙️  Gravando a narração...")
-    audio = pasta / "narracao.mp3"
-    inicios = None
-    if longo:
-        palavras, inicios = voz.gerar_partes([p["texto"] for p in r["partes"]], audio)
-    else:
-        palavras = voz.gerar(r["roteiro"], audio)
-
-    final = video.montar(r, audio, palavras, pasta, formato=args.formato, inicios_partes=inicios)
+    try:
+        r, pasta, final, inicios, tendencia = produzir(tema, tendencia)
+    except video.PoucasImagens as erro:
+        melhor = erro
+        # Short do horário automático: nunca fica sem vídeo. Troca para um tema com boas fotos reais
+        # e tenta de novo (até 2 vezes); se nada der certo, publica a melhor versão e avisa.
+        if (_automatico() or os.getenv("TESTE_RESERVA") == "sim") and not _alta() and not args.tema:
+            reservas = [t for t in TEMAS_RESERVA]
+            random.shuffle(reservas)
+            for n, reserva in enumerate(reservas[:2], 1):
+                print(f"::warning title=Poucas imagens::{erro} Tentativa {n}/2 com outro tema: {reserva}")
+                try:
+                    r, pasta, final, inicios, tendencia = produzir(reserva, None)
+                    melhor = None
+                    break
+                except video.PoucasImagens as outro:
+                    if outro.quantas > melhor.quantas:
+                        melhor = outro
+        if melhor is not None:
+            print(f"::warning title=Publicado com poucas imagens::Nenhuma tentativa chegou a "
+                  f"{video.MIN_IMAGENS_CURTO} imagens diferentes; publicando a melhor versão "
+                  f"({melhor.quantas} imagens).")
+            video.CREDITOS.clear()
+            final = melhor.refazer()
+            r, pasta, inicios, tendencia = melhor.r, melhor.pasta, melhor.inicios, melhor.tendencia
     if video.CREDITOS:  # licença das fotos da Wikimedia pede crédito
         creditos = "\n".join(f"• {c}" for c in dict.fromkeys(video.CREDITOS))
         r["descricao"] = f"{r.get('descricao', '').strip()}\n\n📷 Fotos (Wikimedia Commons):\n{creditos}"

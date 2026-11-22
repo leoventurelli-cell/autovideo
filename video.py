@@ -125,7 +125,25 @@ OVNI_REAIS = ("Gimbal UAP",                    # vídeo Gimbal, Marinha dos EUA 
               "UFO Muszyna 1958",              # foto de Muszyna, Polônia (1958)
               "fotógrafo revelou filme 1958")  # jornal O Globo de 1958 sobre as fotos da Ilha da Trindade
 OVNI_TEMA = (" ovni", "ufo", " uap", "disco voador", "extraterr", " alien", " nave ", "luzes misteriosas")
-MIN_IMAGENS_CURTO = int(__import__("os").environ.get("MIN_IMAGENS", "6"))  # menos que isso: não publica
+MIN_IMAGENS_CURTO = int(__import__("os").environ.get("MIN_IMAGENS", "6"))  # menos que isso: troca de tema
+
+
+class PoucasImagens(RuntimeError):
+    """Short com menos imagens diferentes que o mínimo (main.py troca de tema e tenta de novo)."""
+    def __init__(self, quantas: int):
+        super().__init__(f"Só {quantas} imagens diferentes (mínimo {MIN_IMAGENS_CURTO}).")
+        self.quantas = quantas
+
+
+def _imagens_diferentes(clipes: dict) -> int:
+    """Conta imagens/vídeos realmente diferentes (o mesmo arquivo baixado duas vezes conta uma vez só)."""
+    import hashlib
+    vistos = set()
+    for c in clipes.values():
+        if c and Path(c).exists():
+            with open(c, "rb") as f:
+                vistos.add((Path(c).stat().st_size, hashlib.md5(f.read(1 << 20)).hexdigest()))
+    return len(vistos)
 CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
 UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
@@ -827,7 +845,8 @@ TRILHAS = {"perigo": _trilha_perigo, "psicodelica": _trilha_psicodelica, "fundo"
 
 
 def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
-           formato: str = "curto", inicios_partes: list[float] | None = None) -> Path:
+           formato: str = "curto", inicios_partes: list[float] | None = None,
+           aceitar_poucas: bool = False) -> Path:
     usar_formato(formato)
     total = duracao(audio) + CAUDA
     if formato == "longo":
@@ -846,10 +865,10 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         plano = [("commons:" + OVNI_REAIS[0], plano[0][1])] + plano[1:] if not plano[0][0].startswith("commons:") else plano
     clipes = baixar_clipes([t for t, _ in plano], pasta, so_reais=bool(roteiro.get("so_fotos_reais")), ovni=ovni)
     if formato != "longo":
-        diferentes = {str(c) for c in clipes.values() if c}
-        if len(diferentes) < MIN_IMAGENS_CURTO:
-            raise RuntimeError(f"Só {len(diferentes)} imagens diferentes (mínimo {MIN_IMAGENS_CURTO}): "
-                               "vídeo repetitivo não é publicado.")
+        diferentes = _imagens_diferentes(clipes)
+        print(f"   🖼️  {diferentes} imagens diferentes")
+        if diferentes < MIN_IMAGENS_CURTO and not aceitar_poucas:
+            raise PoucasImagens(diferentes)
 
     print("✂️  Preparando cenas...")
     lista = pasta / "cenas.txt"
