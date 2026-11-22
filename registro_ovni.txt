@@ -1,0 +1,37 @@
+🧠 Escrevendo o roteiro (curto)...
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   ✨ título viral: OVNI da Marinha: MISTÉRIO do disco que girou a 4 mil pés
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   🖼️  imagens conferidas com a narração: ['commons:Marinha radar', 'ia:mysterious abstract background', 'wiki:Northrop Grumman EP-3E Aries II', 'ia:cylindrical UFO hovering over ocean', 'ia:fast moving UFO over water', 'wiki:California coast', 'wiki:The Pentagon', 'ia:mysterious object appearing', 'ia:pulsating light disc', 'wiki:United States Department of Defense', 'wiki:Johns Hopkins University', 'ia:fast moving UFO over water', 'commons:FLIR1', 'commons:2022 Pentagon UAP report', 'wiki:The Pentagon', 'commons:military drone', 'ia:extraterrestrial technology concept', 'ia:pulsating disc in sky', 'ia:social media follow icon']
+   → OVNI da Marinha: MISTÉRIO do disco que girou a 4 mil pés
+🎙️  Gravando a narração...
+🎬 Baixando clipes (17 temas, 19 cenas)...
+   🎞️  vídeo real do Commons para 'Go Fast UAP Footage': Go Fast Official USG Footage of UAP for Public Release.webm
+   🎞️  vídeo real do Commons para 'FLIR1 UAP': FLIR1 Official UAP Footage from the USG for Public Release.webm
+   🖼️  foto real do Commons para 'Tic Tac UFO Nimitz': USS Nimitz 2004 tic tac UFO.jpg
+   🖼️  foto real do Commons para 'Paul Trent UFO McMinnville': UFO picture taken by Paul Trent in McMinnville, Oregon.jpg
+   'California coast' (en) só tem logo/brasão/mapa (Coastal_California_Map.svg); procurando foto de verdade
+   🖼️  foto real do Commons para 'California coast': California Coast (16517258023).jpg
+   🔄 'The Pentagon': usando outra foto real (The Pentagon January 2008.jpg) em vez do retrato de sempre
+   🖼️  foto real 7/17: 'The Pentagon'
+   🖼️  foto real do Commons para 'McMinnville UFO': McMinnville UFO 1.png
+   🖼️  foto real do Commons para 'Supposed UFO Passaic': Supposed UFO, Passaic, New Jersey.jpg
+   'United States Department of Defense' (pt) só tem logo/brasão/mapa (Seal_of_the_United_States_Department_of_War_(2025).svg); procurando foto de verdade
+   'United States Department of Defense' (en) só tem logo/brasão/mapa (Seal_of_the_United_States_Department_of_War_(2025).svg); procurando foto de verdade
+   🖼️  foto real do Commons para 'United States Department of Defense': The Pentagon US Department of Defense building.jpg
+   🔄 'Johns Hopkins University': usando outra foto real (Johns Hopkins' Historic Dome - panoramio.jpg) em vez do retrato de sempre
+   🖼️  foto real 11/17: 'Johns Hopkins University'
+   🖼️  foto real do Commons para 'UFO Muszyna 1958': UFO Muszyna 1958.jpg
+   🎞️  vídeo real do Commons para '2022 Pentagon UAP report': DOW-UAP-PR047, Unresolved UAP Report, INDOPACOM, 2023.webm
+   🖼️  foto real do Commons para 'military drone': UA military FPV drones 02.jpg
+   🖼️  foto real do Commons para 'fotógrafo revelou filme 1958': OG, 33º ano, nº 9.758, 1º caderno, quarta-feira, 26 fev. 1958, p. 3 (O fotógrafo estava só quando revelou o filme)focadoerestau.jpg
+   🎞️  vídeo de banco no lugar da IA: 'disc sky'
+   🎞️  vídeo de banco no lugar da IA: 'social media follow'
+   ↺ 'wiki:Northrop Grumman EP-3E Aries II' reaproveita clipe_4.jpg
+   🖼️  16 imagens diferentes
+✂️  Preparando cenas...
+📝 Criando legendas...
+🎧 Juntando tudo...
+   🎵 trilha de mistério pronta
+✅ Vídeo pronto: /home/runner/work/autovideo/autovideo/saida/2026-11-22_1221_videos-ovni-da-marinha-dos-eua/ovni-da-marinha-misterio-do-disco-que-gi.mp4 (1.3 min)
