@@ -114,9 +114,16 @@ IMAGINARIOS = (" alien", "ufo", "spaceship", "space ship", "spacecraft", "flying
                "haunted", "apparition", "spirit ", "shadow figure", "poltergeist", "demon", "possessed", "phantom")
 # OVNI/UAP: mídia REAL e famosa no Wikimedia Commons (domínio público na maioria), usada quando o roteiro
 # é sobre OVNI e faltam imagens — o público quer VER a nave/luz, não a marina ou o velejador.
-OVNI_REAIS = ("Gimbal UAP", "GoFast UAP", "FLIR1 UAP", "Tic Tac UFO Nimitz", "Ilha da Trindade OVNI 1958",
-              "Trindade island UFO", "McMinnville UFO photographs", "Operação Prato", "Phoenix Lights",
-              "UFO photograph 1952", "Lubbock Lights", "Unidentified flying object photograph")
+# Conferido no Commons em 22/11/2026: cada busca abaixo encontra o arquivo indicado (o 1º abre o vídeo).
+OVNI_REAIS = ("Gimbal UAP",                    # vídeo Gimbal, Marinha dos EUA (2015)
+              "Go Fast UAP Footage",           # vídeo GoFast, Marinha dos EUA (2015)
+              "FLIR1 UAP",                     # vídeo FLIR1 / Tic Tac, USS Nimitz (2004)
+              "Tic Tac UFO Nimitz",            # ilustração do Tic Tac, USS Nimitz (2004)
+              "Paul Trent UFO McMinnville",    # foto de McMinnville, Oregon (1950)
+              "McMinnville UFO",               # 2ª versão da foto de McMinnville
+              "Supposed UFO Passaic",          # foto de Passaic, Nova Jersey (1952)
+              "UFO Muszyna 1958",              # foto de Muszyna, Polônia (1958)
+              "fotógrafo revelou filme 1958")  # jornal O Globo de 1958 sobre as fotos da Ilha da Trindade
 OVNI_TEMA = (" ovni", "ufo", " uap", "disco voador", "extraterr", " alien", " nave ", "luzes misteriosas")
 MIN_IMAGENS_CURTO = int(__import__("os").environ.get("MIN_IMAGENS", "6"))  # menos que isso: não publica
 CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
@@ -444,7 +451,7 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False, ovni: b
     # OVNI: cenas sem mídia (ou só fotos genéricas repetidas) ganham vídeo/foto REAL de OVNI famoso
     if ovni:
         faltando = [t for t in unicos if clipes.get(t) is None]
-        reais = [q for q in OVNI_REAIS]
+        reais = list(OVNI_REAIS[1:])  # o 1º já abre o vídeo: não repete
         for j, termo in enumerate(faltando):
             while reais:
                 achado = _midia_commons(reais.pop(0), pasta, 100 + j)
