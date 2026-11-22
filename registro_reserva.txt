@@ -1,0 +1,160 @@
+📈 Olhando o que está em alta hoje (Google Trends + YouTube)...
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   📈 em alta: Navio fantasma russo promete ancorar no Brasil → tema: O mistério do navio fantasma russo que ancorou no Brasil em 2026
+🧠 Escrevendo o roteiro (curto)...
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   ✨ título viral: Navio fantasma russo: o que se sabe?
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   🔎 checagem de fatos feita → Navio fantasma russo: o que se sabe?
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   🖼️  imagens conferidas com a narração: ['ia:Russian ghost ship anchored in Santos harbor', 'wiki:Coast of Brazil', 'ia:dramatic question mark overlay', 'commons:Gazeta do Povo newspaper', 'ia:low tide exposing shipwreck on beach', 'wiki:Brazilian Navy', 'ia:old rusty ship hull in sand', 'wiki:1910s', 'ia:oil barrels rusted on deck', 'ia:billion-dollar diesel smuggling scheme illustration', 'wiki:Donald Trump', 'ia:secret meeting in dimly lit room', 'ia:large diesel fuel drums', 'ia:forensic investigators testing diesel residue in ship hold', 'ia:high-value diesel fuel barrels', 'ia:Russian shipbuilding markings on hull', 'ia:Russian flag on ship hull', 'ia:illustration of maritime supply routes to Antarctic bases', 'ia:call to action button']
+   → Navio fantasma russo: o que se sabe?
+🎙️  Gravando a narração...
+🎬 Baixando clipes (19 temas, 19 cenas)...
+   ↺ 'ia:Russian ghost ship anchored in Santos harbor' (notícia: só foto real)
+   🔄 'Coast of Brazil': usando outra foto real (Brazilian coast.jpg) em vez do retrato de sempre
+   🖼️  foto real 2/19: 'Coast of Brazil'
+   ↺ 'ia:dramatic question mark overlay' (notícia: só foto real)
+   🖼️  foto real do Commons para 'Gazeta do Povo newspaper': Gazeta-do-povo PredioAntigo.jpg
+   ↺ 'ia:low tide exposing shipwreck on beach' (notícia: só foto real)
+   'Brazilian Navy' (en) só tem logo/brasão/mapa (Logo_of_the_Brazilian_Navy.svg); procurando foto de verdade
+   ↺ 'ia:old rusty ship hull in sand' (notícia: só foto real)
+   🖼️  foto real 8/19: '1910s'
+   ↺ 'ia:oil barrels rusted on deck' (notícia: só foto real)
+   ↺ 'ia:billion-dollar diesel smuggling scheme illustration' (notícia: só foto real)
+   🔄 'Donald Trump': usando outra foto real (Donald Trump official portrait.jpg) em vez do retrato de sempre
+   🖼️  foto real 11/19: 'Donald Trump'
+   ↺ 'ia:secret meeting in dimly lit room' (notícia: só foto real)
+   ↺ 'ia:large diesel fuel drums' (notícia: só foto real)
+   ↺ 'ia:forensic investigators testing diesel residue in ship hold' (notícia: só foto real)
+   ↺ 'ia:high-value diesel fuel barrels' (notícia: só foto real)
+   ↺ 'ia:Russian shipbuilding markings on hull' (notícia: só foto real)
+   ↺ 'ia:Russian flag on ship hull' (notícia: só foto real)
+   ↺ 'ia:illustration of maritime supply routes to Antarctic bases' (notícia: só foto real)
+   🖼️  foto real do Commons para 'call to action button': Example call to action button canto.png
+   ↺ 'ia:Russian ghost ship anchored in Santos harbor' reaproveita clipe_3.jpg
+   ↺ 'ia:dramatic question mark overlay' reaproveita clipe_10.jpg
+   ↺ 'ia:low tide exposing shipwreck on beach' reaproveita clipe_7.jpg
+   ↺ 'wiki:Brazilian Navy' reaproveita clipe_10.jpg
+   ↺ 'ia:old rusty ship hull in sand' reaproveita clipe_10.jpg
+   ↺ 'ia:oil barrels rusted on deck' reaproveita clipe_3.jpg
+   ↺ 'ia:billion-dollar diesel smuggling scheme illustration' reaproveita clipe_18.jpg
+   ↺ 'ia:secret meeting in dimly lit room' reaproveita clipe_10.jpg
+   ↺ 'ia:large diesel fuel drums' reaproveita clipe_10.jpg
+   ↺ 'ia:forensic investigators testing diesel residue in ship hold' reaproveita clipe_10.jpg
+   ↺ 'ia:high-value diesel fuel barrels' reaproveita clipe_7.jpg
+   ↺ 'ia:Russian shipbuilding markings on hull' reaproveita clipe_1.jpg
+   ↺ 'ia:Russian flag on ship hull' reaproveita clipe_1.jpg
+   ↺ 'ia:illustration of maritime supply routes to Antarctic bases' reaproveita clipe_3.jpg
+   🖼️  5 imagens diferentes
+::warning title=Poucas imagens::Só 5 imagens diferentes (mínimo 99). Tentativa 1/2 com outro tema: Criaturas reais do fundo do mar que parecem de outro planeta (use fotos reais desses animais)
+🧠 Escrevendo o roteiro (curto)...
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   ✨ título viral: Criaturas abissais: 4 seres EXTRAORDINÁRIOS do fundo do mar
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   🖼️  imagens conferidas com a narração: ['deep sea', 'wiki:Carl Chun', 'wiki:Vampyroteuthis infernalis', 'ia:bioluminescent deep sea creature interior glowing like stars', 'commons:HMS Challenger', 'wiki:HMS Challenger', 'wiki:Eurypharynx pelecanoides', 'commons:Deep Discoverer', 'wiki:Grimpoteuthis', 'wiki:Mariana Trench', 'ia:deep sea worm with elephant-like shape glowing', 'ia:ghostly transparent deep sea worm', 'wiki:Osedax', 'commons:Osedax whale bone', 'ia:DNA helix overlay between deep sea creature and land animal', 'ia:comparative DNA strands of Vampyroteuthis infernalis and terrestrial organism', 'ia:deep sea evolution montage', 'ia:alien-like deep sea creatures swimming', 'ia:alien-like creature swimming slowly']
+   → Criaturas abissais: 4 seres EXTRAORDINÁRIOS do fundo do mar
+🎙️  Gravando a narração...
+🎬 Baixando clipes (19 temas, 19 cenas)...
+   🎞️  vídeo real do Commons para 'Gimbal UAP': Gimbal The First Official UAP Footage from the USG for Public Release.webm
+   🔄 'Carl Chun': usando outra foto real (Carl Chun 1899.jpg) em vez do retrato de sempre
+   🖼️  foto real 2/19: 'Carl Chun'
+   🖼️  foto real 3/19: 'Vampyroteuthis infernalis'
+   🎞️  vídeo real do Commons para 'Go Fast UAP Footage': Go Fast Official USG Footage of UAP for Public Release.webm
+   🖼️  foto real do Commons para 'HMS Challenger': HMS Challenger FL7843.jpg
+   🔄 'HMS Challenger': usando outra foto real (HMS challenger William Frederick Mitchell.jpg) em vez do retrato de sempre
+   🖼️  foto real 6/19: 'HMS Challenger'
+   🖼️  foto real 7/19: 'Eurypharynx pelecanoides'
+   🖼️  foto real do Commons para 'Deep Discoverer': Deep Discoverer ferromanganese nodules North Atlantic 2021.png
+   🖼️  foto real 9/19: 'Grimpoteuthis'
+   🔄 'Mariana Trench': usando outra foto real (Cross section of mariana trench He.jpg) em vez do retrato de sempre
+   🖼️  foto real 10/19: 'Mariana Trench'
+   🎞️  vídeo real do Commons para 'FLIR1 UAP': FLIR1 Official UAP Footage from the USG for Public Release.webm
+   🖼️  foto real do Commons para 'Tic Tac UFO Nimitz': USS Nimitz 2004 tic tac UFO.jpg
+   🖼️  foto real 13/19: 'Osedax'
+   🖼️  foto real do Commons para 'Paul Trent UFO McMinnville': UFO picture taken by Paul Trent in McMinnville, Oregon.jpg
+   🖼️  foto real do Commons para 'McMinnville UFO': McMinnville UFO 1.png
+   🖼️  foto real do Commons para 'Supposed UFO Passaic': Supposed UFO, Passaic, New Jersey.jpg
+   🖼️  foto real do Commons para 'UFO Muszyna 1958': UFO Muszyna 1958.jpg
+   🖼️  foto real do Commons para 'fotógrafo revelou filme 1958': OG, 33º ano, nº 9.758, 1º caderno, quarta-feira, 26 fev. 1958, p. 3 (O fotógrafo estava só quando revelou o filme)focadoerestau.jpg
+   🎞️  vídeo de banco no lugar da IA: 'alien like'
+   🖼️  19 imagens diferentes
+::warning title=Poucas imagens::Só 5 imagens diferentes (mínimo 99). Tentativa 2/2 com outro tema: Um caso histórico real e famoso registrado em fotografias antigas (use as fotos reais do caso)
+🧠 Escrevendo o roteiro (curto)...
+   (roteiro escrito pelo modelo openai/gpt-oss-120b no Groq)
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199722, Requested 1277. Please try again in 7m11.568s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199721, Requested 4617. Please try again in 31m14.016s. Need more tokens? Upgrade to Dev Tier today at https:/
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199721, Requested 2819. Please try again in 18m17.28s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199721, Requested 2843. Please try again in 18m27.648s. Need more tokens? Upgrade to Dev Tier today at https:/
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199721, Requested 1296. Please try again in 7m19.344s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199721, Requested 3401. Please try again in 22m28.704s. Need more tokens? Upgrade to Dev Tier today at https:/
+   (roteiro escrito pelo modelo qwen/qwen3.8-27b no Groq)
+   ✨ título viral: Ötzi: O CONGELADO dos Alpes que assustou o mundo
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199438, Requested 1213. Please try again in 4m41.232s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199438, Requested 1171. Please try again in 4m23.088s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199438, Requested 1215. Please try again in 4m42.096s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199436, Requested 5582. Please try again in 36m7.776s. Need more tokens? Upgrade to Dev Tier today at https://
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199436, Requested 1239. Please try again in 4m51.6s. Need more tokens? Upgrade to Dev Tier today at https://co
+   ⚠️ Groq (openai/gpt-oss-120b) respondeu 429 {"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv86fhnbef8vx6ka2n74aszh` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199436, Requested 1215. Please try again in 4m41.232s. Need more tokens? Upgrade to Dev Tier today at https://
+   (roteiro escrito pelo modelo qwen/qwen3.8-27b no Groq)
+   🖼️  imagens conferidas com a narração: ['wiki:Ötzi', 'ancient mystery', 'wiki:Ötztal Alps', 'wiki:Tattoo', 'wiki:Copper axe', 'wiki:Bow (weapon)', 'wiki:Arrow', 'dna sequencing', 'lactose intolerance', 'wheat grain', 'x-ray scan', 'arrow wound', 'head trauma', 'wiki:Tuscany', 'ancient trade routes', 'ancient beer', 'hunter gatherer', 'subscribe button', 'wiki:Ötzi']
+   → Ötzi: O CONGELADO dos Alpes que assustou o mundo
+🎙️  Gravando a narração...
+🎬 Baixando clipes (18 temas, 19 cenas)...
+   🖼️  foto real 1/18: 'Ötzi'
+   🎞️  clipe 2/18: 'ancient mystery'
+   🔄 'Ötztal Alps': usando outra foto real (Schenna Klammeben view of Ötztal Alps 4.jpg) em vez do retrato de sempre
+   🖼️  foto real 3/18: 'Ötztal Alps'
+   'Tattoo' na Wikipédia (pt) é outra coisa: página de desambiguação da wikimedia
+   🖼️  foto real 4/18: 'Tattoo'
+   🖼️  foto real do Commons para 'Copper axe': Copper battle axe REM.JPG
+   🖼️  foto real 6/18: 'Bow (weapon)'
+   'Arrow' na Wikipédia (pt) é outra coisa: página de desambiguação da wikimedia
+   🖼️  foto real 7/18: 'Arrow'
+   🎞️  clipe 8/18: 'dna sequencing'
+   🎨 imagem IA 9/18: 'lactose intolerance' (sem vídeo que combine)
+   🎞️  clipe 10/18: 'wheat grain'
+   🎞️  clipe 11/18: 'x-ray scan'
+   🎞️  clipe 12/18: 'arrow wound'
+   🎞️  clipe 13/18: 'head trauma'
+   'Tuscany' (en) só tem logo/brasão/mapa (Tuscany_in_Italy.svg); procurando foto de verdade
+   🎞️  vídeo de banco no lugar da IA: 'tuscany'
+   imagem IA: tentativa 1 → 402 (servidor ocupado)
+   imagem IA: tentativa 2 → 402 (servidor ocupado)
+   🎞️  clipe 15/18: 'ancient trade routes'
+   🎞️  clipe 16/18: 'ancient beer'
+   🎨 imagem IA 17/18: 'hunter gatherer' (sem vídeo que combine)
+   🎞️  clipe 18/18: 'subscribe button'
+   🖼️  18 imagens diferentes
+::warning title=Publicado com poucas imagens::Nenhuma tentativa chegou a 99 imagens diferentes; publicando a melhor versão (19 imagens).
+🎬 Baixando clipes (19 temas, 19 cenas)...
+   🎞️  vídeo real do Commons para 'Gimbal UAP': Gimbal The First Official UAP Footage from the USG for Public Release.webm
+   🔄 'Carl Chun': usando outra foto real (Carl Chun 1912.jpg) em vez do retrato de sempre
+   🖼️  foto real 2/19: 'Carl Chun'
+   🖼️  foto real 3/19: 'Vampyroteuthis infernalis'
+   🎞️  vídeo real do Commons para 'Go Fast UAP Footage': Go Fast Official USG Footage of UAP for Public Release.webm
+   🖼️  foto real do Commons para 'HMS Challenger': HMS Challenger FL7843.jpg
+   🔄 'HMS Challenger': usando outra foto real (Wreck of HMS Challenger.jpg) em vez do retrato de sempre
+   🖼️  foto real 6/19: 'HMS Challenger'
+   🖼️  foto real 7/19: 'Eurypharynx pelecanoides'
+   🖼️  foto real do Commons para 'Deep Discoverer': Deep Discoverer ferromanganese nodules North Atlantic 2021.png
+   🖼️  foto real 9/19: 'Grimpoteuthis'
+   🔄 'Mariana Trench': usando outra foto real (Mariana Trench Map 1907.jpg) em vez do retrato de sempre
+   🖼️  foto real 10/19: 'Mariana Trench'
+   🎞️  vídeo real do Commons para 'FLIR1 UAP': FLIR1 Official UAP Footage from the USG for Public Release.webm
+   🖼️  foto real do Commons para 'Tic Tac UFO Nimitz': USS Nimitz 2004 tic tac UFO.jpg
+   🖼️  foto real 13/19: 'Osedax'
+   🖼️  foto real do Commons para 'Paul Trent UFO McMinnville': UFO picture taken by Paul Trent in McMinnville, Oregon.jpg
+   🖼️  foto real do Commons para 'McMinnville UFO': McMinnville UFO 1.png
+   🖼️  foto real do Commons para 'Supposed UFO Passaic': Supposed UFO, Passaic, New Jersey.jpg
+   🖼️  foto real do Commons para 'UFO Muszyna 1958': UFO Muszyna 1958.jpg
+   🖼️  foto real do Commons para 'fotógrafo revelou filme 1958': OG, 33º ano, nº 9.758, 1º caderno, quarta-feira, 26 fev. 1958, p. 3 (O fotógrafo estava só quando revelou o filme)focadoerestau.jpg
+   🎞️  vídeo de banco no lugar da IA: 'alien like'
+   🖼️  19 imagens diferentes
+✂️  Preparando cenas...
+📝 Criando legendas...
+🎧 Juntando tudo...
+   🎵 trilha de mistério pronta
+✅ Vídeo pronto: /home/runner/work/autovideo/autovideo/saida/2026-11-22_1223_criaturas-abissais-que-parecem-extraterr/criaturas-abissais-4-seres-extraordinari.mp4 (1.4 min)
