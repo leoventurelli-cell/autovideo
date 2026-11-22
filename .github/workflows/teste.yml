@@ -1,0 +1,74 @@
+name: Teste (sem publicar)
+
+# Roda só na cópia "melhorias-retencao": gera um Short SEM publicar e guarda o vídeo
+# e um mosaico das cenas na pasta teste_saida/ deste mesmo branch. Não mexe no main.
+on:
+  push:
+    branches: [melhorias-retencao]
+    paths-ignore: ["teste_saida/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: teste-retencao
+  cancel-in-progress: true
+
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar FFmpeg
+        timeout-minutes: 10
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          fi
+          mkdir -p fontes
+          [ -f fontes/Poppins-Bold.ttf ] || curl -sSL -o fontes/Poppins-Bold.ttf \
+            https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Gerar Short de teste (sem publicar)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          NICHO: ${{ vars.NICHO }}
+          CANAL: ${{ vars.CANAL }}
+          VOZ: ${{ vars.VOZ }}
+          PUBLICAR_YOUTUBE: "nao"
+          PUBLICAR_TIKTOK: "nao"
+          FORMATO: curto
+        run: |
+          touch /tmp/marca
+          python main.py --formato curto --sem-publicar \
+            --tema "Os vídeos de OVNI da Marinha dos EUA: Gimbal, GoFast e FLIR1" 2>&1 | tee log.txt
+
+      - name: Guardar vídeo, mosaico e registro
+        if: always()
+        run: |
+          mkdir -p teste_saida
+          cp log.txt teste_saida/registro.txt 2>/dev/null || true
+          MP4=$(find saida -name "*.mp4" -newer /tmp/marca ! -name "*-short.mp4" 2>/dev/null | head -1)
+          if [ -n "$MP4" ]; then
+            ffmpeg -y -loglevel error -i "$MP4" -c copy teste_saida/short_teste.mp4
+            ffmpeg -y -loglevel error -i "$MP4" -vf "fps=1/2,scale=216:-1,tile=6x5:padding=4" -frames:v 1 teste_saida/mosaico.jpg
+          fi
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          git add -f teste_saida
+          git diff --cached --quiet || (git commit -m "resultado do teste" && git push)
