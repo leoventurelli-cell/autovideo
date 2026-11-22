@@ -1,7 +1,7 @@
 name: Teste (sem publicar)
 
 # Roda só na cópia "melhorias-retencao". NADA é publicado e o main não é tocado.
-# Os resultados (vídeos, mosaicos e registros) ficam na pasta teste_saida/ deste branch.
+# Os resultados (vídeos, mosaicos e registros) ficam nos branches teste-resultado-ovni/-reserva/-radar.
 on:
   push:
     branches: [melhorias-retencao]
@@ -78,9 +78,8 @@ jobs:
             ffmpeg -y -loglevel error -i "$MP4" -c copy "teste_saida/short_$C.mp4"
             ffmpeg -y -loglevel error -i "$MP4" -vf "fps=1/2,scale=216:-1,tile=6x5:padding=4" -frames:v 1 "teste_saida/mosaico_$C.jpg"
           fi
-          git config user.name "autovideo-bot"
-          git config user.email "autovideo-bot@users.noreply.github.com"
-          git add -f teste_saida
-          git diff --cached --quiet && exit 0
-          git commit -m "resultado do teste ($C)"
-          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep 5; done
+          # cada teste guarda o resultado num branch só dele (teste-resultado-ovni, -reserva, -radar)
+          cd teste_saida
+          git init -q -b r && git add -A
+          git -c user.name=autovideo-bot -c user.email=autovideo-bot@users.noreply.github.com commit -qm "resultado do teste ($C)"
+          git push -fq "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" r:refs/heads/teste-resultado-$C
