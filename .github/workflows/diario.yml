@@ -234,4 +234,20 @@ jobs:
             [ -e "$f" ] && git add "$f"
           done
           [ -d docs/tiktok ] && git add -A docs/tiktok  # cópias leves dos Shorts para o celular
-          git diff --cached --quiet || (git commit -m "novo vídeo" && git pull --rebase && git push)
+          # salva sem perder o vídeo: se outra execução renovou o token do TikTok/YouTube ao mesmo tempo,
+          # fica o token que já está no main (ele já funciona) e o histórico/painel deste vídeo é gravado
+          salvar() {
+            git diff --cached --quiet && return 0
+            git commit -qm "$1"
+            for i in 1 2 3 4 5; do
+              if git pull --rebase -q; then git push -q && return 0
+              else
+                for t in tiktok.token youtube.token; do git checkout --ours -- "$t" 2>/dev/null && git add "$t"; done
+                if GIT_EDITOR=true git rebase --continue; then git push -q && return 0; fi
+                git rebase --abort
+              fi
+              sleep $((i * 5))
+            done
+            echo "::error::Não consegui salvar o histórico/painel"; return 1
+          }
+          salvar "novo vídeo"
