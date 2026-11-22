@@ -404,6 +404,7 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False, ovni: b
     (nada de banco de vídeo genérico, que mostrava bandeira e urna de outro país)."""
     unicos = list(dict.fromkeys(cenas))
     usados, clipes = set(), {}
+    reais_ovni = list(OVNI_REAIS[1:]) if ovni else []  # o 1º já abre o vídeo: não repete
     for i, termo in enumerate(unicos):
         tipo, _, valor = termo.partition(":") if termo.split(":", 1)[0] in ("wiki", "ia", "commons") else ("", "", termo)
         valor = valor.strip()
@@ -430,6 +431,13 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False, ovni: b
             clipes[termo] = None  # notícia: depois repete uma foto real que deu certo
             print(f"   ↺ '{termo}' (notícia: só foto real)")
             continue
+        if tipo == "ia" and reais_ovni:  # tema OVNI: cena imaginada vira foto/vídeo REAL de OVNI famoso
+            achado = None
+            while reais_ovni and not achado:
+                achado = _midia_commons(reais_ovni.pop(0), pasta, i)
+            if achado:
+                clipes[termo] = achado
+                continue
         if tipo == "ia" and config.PEXELS_API_KEY:  # primeiro um VÍDEO real de banco que mostre a cena
             achado = _pexels_reserva(valor, usados, pasta / f"clipe_{i}.mp4")
             if achado:
@@ -469,10 +477,9 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False, ovni: b
     # OVNI: cenas sem mídia (ou só fotos genéricas repetidas) ganham vídeo/foto REAL de OVNI famoso
     if ovni:
         faltando = [t for t in unicos if clipes.get(t) is None]
-        reais = list(OVNI_REAIS[1:])  # o 1º já abre o vídeo: não repete
         for j, termo in enumerate(faltando):
-            while reais:
-                achado = _midia_commons(reais.pop(0), pasta, 100 + j)
+            while reais_ovni:
+                achado = _midia_commons(reais_ovni.pop(0), pasta, 100 + j)
                 if achado:
                     clipes[termo] = achado
                     break
