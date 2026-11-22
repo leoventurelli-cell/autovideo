@@ -112,6 +112,13 @@ def _buscar_pexels(termo: str, ja_usados: set, exigir_relevancia: bool = False) 
 IMAGINARIOS = (" alien", "ufo", "spaceship", "space ship", "spacecraft", "flying saucer", "extraterrestrial",
                "creature", "monster", "ghost", "humanoid", " et ", "mothership", "abduction", "cryptid",
                "haunted", "apparition", "spirit ", "shadow figure", "poltergeist", "demon", "possessed", "phantom")
+# OVNI/UAP: mídia REAL e famosa no Wikimedia Commons (domínio público na maioria), usada quando o roteiro
+# é sobre OVNI e faltam imagens — o público quer VER a nave/luz, não a marina ou o velejador.
+OVNI_REAIS = ("Gimbal UAP", "GoFast UAP", "FLIR1 UAP", "Tic Tac UFO Nimitz", "Ilha da Trindade OVNI 1958",
+              "Trindade island UFO", "McMinnville UFO photographs", "Operação Prato", "Phoenix Lights",
+              "UFO photograph 1952", "Lubbock Lights", "Unidentified flying object photograph")
+OVNI_TEMA = (" ovni", "ufo", " uap", "disco voador", "extraterr", " alien", " nave ", "luzes misteriosas")
+MIN_IMAGENS_CURTO = int(__import__("os").environ.get("MIN_IMAGENS", "6"))  # menos que isso: não publica
 CREDITOS: list[str] = []  # créditos das fotos da Wikimedia usadas no vídeo (vão para a descrição)
 UA = {"User-Agent": "AutoVideoBot/1.0 (https://github.com/leoventurelli-cell/autovideo)"}
 
@@ -362,7 +369,7 @@ def _pexels_reserva(descricao: str, usados: set, destino: Path) -> Path | None:
     return None
 
 
-def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict[str, Path | None]:
+def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False, ovni: bool = False) -> dict[str, Path | None]:
     """Uma mídia por termo (sem repetir termos):
        'wiki:Nome'  → foto real da Wikimedia (pessoas, lugares, objetos famosos)
        'ia:cena'    → imagem gerada por IA (ET, nave, criaturas, cenas imaginadas)
@@ -434,6 +441,16 @@ def baixar_clipes(cenas: list[str], pasta: Path, so_reais: bool = False) -> dict
         except Exception as erro:
             print(f"   ⚠️  '{termo}' sem clipe: {erro}")
             clipes[termo] = None
+    # OVNI: cenas sem mídia (ou só fotos genéricas repetidas) ganham vídeo/foto REAL de OVNI famoso
+    if ovni:
+        faltando = [t for t in unicos if clipes.get(t) is None]
+        reais = [q for q in OVNI_REAIS]
+        for j, termo in enumerate(faltando):
+            while reais:
+                achado = _midia_commons(reais.pop(0), pasta, 100 + j)
+                if achado:
+                    clipes[termo] = achado
+                    break
     # cena de IA que falhou: repete uma imagem de IA que deu certo (ET/nave) em vez de fundo vazio
     feitas = [c for c in clipes.values() if c and c.suffix == ".jpg" and c.name.startswith("clipe_")]
     for termo in unicos:
@@ -487,11 +504,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         margem = 330 if H > W else 0  # no Short, abaixo da barra do topo do TikTok/YouTube
         linhas.append(f"Dialogue: 1,{_tempo_ass(inicio)},{_tempo_ass(inicio + 3.5)},Titulo,,0,0,{margem},,"
                       f"{{\\fad(250,300)}}{_limpo(titulo).upper()}")
-    for grupo in _grupos_de_palavras(palavras, maximo=P["palavras_por_vez"]):
+    grupos = list(_grupos_de_palavras(palavras, maximo=P["palavras_por_vez"]))
+    for g, grupo in enumerate(grupos):
+        proximo = grupos[g + 1][0]["inicio"] if g + 1 < len(grupos) else None
         textos = [_limpo(p["texto"]).upper() for p in grupo]
         for i, p in enumerate(grupo):
             inicio = p["inicio"]
             fim = grupo[i + 1]["inicio"] if i + 1 < len(grupo) else p["fim"] + 0.12
+            if proximo is not None:
+                fim = min(fim, proximo - 0.01)
             partes = [
                 f"{{\\c{config.COR_DESTAQUE}\\fscx112\\fscy112}}{t}{{\\r}}" if j == i else t
                 for j, t in enumerate(textos)
@@ -590,7 +611,7 @@ def _cena_de_video(clipe: Path, segundos: float, destino: Path, inicio_clipe: fl
 
 def _plano_curto(roteiro: dict, palavras: list[dict], total: float) -> list[tuple[str, float]]:
     """Curto: uma cena por termo, cortes nos inícios de palavra."""
-    cenas = roteiro["cenas"][:12] or ["nature"]
+    cenas = roteiro["cenas"][:20] or ["nature"]
     cortes = [0.0]
     for i in range(1, len(cenas)):
         indice = round(i * len(palavras) / len(cenas))
@@ -812,7 +833,16 @@ def montar(roteiro: dict, audio: Path, palavras: list[dict], pasta: Path,
         titulos = [(0.05, gancho)] if gancho else None
 
     print(f"🎬 Baixando clipes ({len(set(t for t, _ in plano))} temas, {len(plano)} cenas)...")
-    clipes = baixar_clipes([t for t, _ in plano], pasta, so_reais=bool(roteiro.get("so_fotos_reais")))
+    texto_todo = " " + " ".join([str(roteiro.get(k, "")) for k in ("titulo", "assunto", "roteiro")]).lower() + " "
+    ovni = any(p in texto_todo for p in OVNI_TEMA)
+    if ovni and formato != "longo":  # abre com o OVNI de verdade: é o que segura o dedo nos 2 primeiros segundos
+        plano = [("commons:" + OVNI_REAIS[0], plano[0][1])] + plano[1:] if not plano[0][0].startswith("commons:") else plano
+    clipes = baixar_clipes([t for t, _ in plano], pasta, so_reais=bool(roteiro.get("so_fotos_reais")), ovni=ovni)
+    if formato != "longo":
+        diferentes = {str(c) for c in clipes.values() if c}
+        if len(diferentes) < MIN_IMAGENS_CURTO:
+            raise RuntimeError(f"Só {len(diferentes)} imagens diferentes (mínimo {MIN_IMAGENS_CURTO}): "
+                               "vídeo repetitivo não é publicado.")
 
     print("✂️  Preparando cenas...")
     lista = pasta / "cenas.txt"

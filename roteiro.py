@@ -28,8 +28,12 @@ RETENÇÃO (é o que faz o algoritmo do YouTube e do TikTok espalhar o vídeo):
   Nunca peça inscrição no começo.
 - Frases curtas e diretas (até 12 palavras), linguagem falada, sem emojis, sem hashtags.
 - Só fatos verdadeiros e verificáveis. Se não tiver certeza, escolha outro assunto.
+- PROIBIDO usar "segundo relatos", "há quem diga" ou "dizem que" para encaixar detalhe sem fonte: cada fato
+  precisa ter quem, onde e quando (ex.: "em 1958, o fotógrafo Almiro Baraúna, a bordo do navio da Marinha...").
+- A "revelação do final" tem que ser um fato real e surpreendente do caso, nunca um detalhe inventado.
+- Não junte uma notícia do dia a um mistério que a notícia não cita (ex.: passeio de vela NÃO vira caso de OVNI).
 - Nunca atribua acontecimentos, descobertas ou falas a empresas, marcas ou pessoas reais se isso não for amplamente conhecido ou não estiver nas manchetes dadas.
-- Mistérios: só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
+- Mistérios e OVNIs: prefira casos famosos com foto ou vídeo real (Ilha da Trindade 1958, Operação Prato, Varginha, Noite Oficial dos OVNIs 1986, vídeos Gimbal/GoFast/FLIR1 da Marinha dos EUA). Só casos reais e documentados (com lugar, data ou fonte conhecida). Diga com clareza o que é fato comprovado e o que é teoria ou lenda.
 - Eleição, política, saúde e notícias: nunca apresente previsão como resultado certo nem invente números; deixe claro que é análise e que pesquisas podem errar.
 - Ciência e medicina: diga em que fase está a pesquisa (laboratório, animais, testes em pessoas, aprovado); nunca prometa cura, nunca indique remédio ou dose; se for saúde, termine lembrando de procurar um médico.
 - Depois da pergunta final, no máximo uma frase curtinha convidando a seguir o canal.
@@ -242,7 +246,7 @@ def gerar(tema: str | None, usados: list[str]) -> dict:
         idioma=config.IDIOMA,
         segundos=segundos,
         palavras=int(segundos * 2.1),  # a voz neural + pausas fala ~2,1 palavras/s
-        cenas=max(6, round(segundos / 7)),
+        cenas=max(10, round(segundos / 4)),
     )
     pedir = _pedir_ao_groq if config.GROQ_API_KEY else _pedir_ao_gemini
     minimo = int(segundos * 2.1 * 0.85)
