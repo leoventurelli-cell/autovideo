@@ -219,6 +219,70 @@ def _midia_commons(busca: str, pasta: Path, i: int) -> Path | None:
     return None
 
 
+FOTOS_USADAS = Path(__file__).with_name("fotos_usadas.json")
+_USADAS_NESTE_VIDEO: set[str] = set()
+
+
+def _fotos_usadas() -> dict:
+    try:
+        return json.loads(FOTOS_USADAS.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _candidatas_pessoa(nome: str) -> list[str]:
+    """Outras fotos reais (JPEG do Commons) cujo nome de arquivo traz o sobrenome/nome da pessoa."""
+    import re as _re
+    palavras = [p for p in _re.findall(r"\w{3,}", _sem_acento(nome)) if p not in ("da", "de", "do", "dos", "das")]
+    if not palavras:
+        return []
+    chave = palavras[-1] if len(palavras) == 1 else None
+    try:
+        r = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
+            "action": "query", "format": "json", "formatversion": 2, "generator": "search", "gsrnamespace": 6,
+            "gsrlimit": 40, "gsrsearch": f"{nome} filetype:bitmap", "prop": "imageinfo",
+            "iiprop": "size|mime"}).json()
+    except Exception:
+        return []
+    achadas = []
+    for p in sorted(r.get("query", {}).get("pages", []), key=lambda p: p.get("index", 99)):
+        ii = (p.get("imageinfo") or [{}])[0]
+        titulo = p.get("title", "")[5:]
+        t = _sem_acento(titulo)
+        if ii.get("mime") != "image/jpeg" or _arquivo_ruim(titulo, nome):
+            continue
+        if min(ii.get("width", 0), ii.get("height", 0)) < 600:
+            continue
+        # precisa citar a pessoa no nome do arquivo (ao menos 2 palavras do nome, ou a única)
+        if (chave and chave not in t) or (not chave and sum(w in t for w in palavras) < min(2, len(palavras))):
+            continue
+        achadas.append(titulo)
+    return achadas
+
+
+def _escolher_foto_pessoa(nome: str, oficial: str) -> str:
+    """Escolhe, entre o retrato da Wikipédia e outras fotos reais da pessoa, a que foi usada há mais tempo
+    (nunca a mesma duas vezes no mesmo vídeo). Guarda a escolha em fotos_usadas.json."""
+    usadas = _fotos_usadas()
+    historico = usadas.get(nome, [])
+    candidatas = list(dict.fromkeys(_candidatas_pessoa(nome)[:11] + [oficial]))  # retrato oficial por último
+    livres = [c for c in candidatas if c not in _USADAS_NESTE_VIDEO]
+    if not livres:
+        return oficial
+    # nunca usada primeiro (na ordem de relevância); depois a usada há mais tempo
+    escolha = min(livres, key=lambda c: (historico.index(c) - len(historico)) if c in historico else -10_000 + candidatas.index(c))
+    _USADAS_NESTE_VIDEO.add(escolha)
+    historico = [h for h in historico if h != escolha] + [escolha]
+    usadas[nome] = historico[-30:]
+    try:
+        FOTOS_USADAS.write_text(json.dumps(usadas, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception:
+        pass
+    if escolha != oficial:
+        print(f"   🔄 '{nome}': usando outra foto real ({escolha}) em vez do retrato de sempre")
+    return escolha
+
+
 def _foto_wikimedia(nome: str, destino: Path) -> bool:
     """Foto real (pessoa, lugar, objeto) da Wikipédia, só se o arquivo estiver no Wikimedia Commons
     (licença livre). Guarda autor e licença em CREDITOS."""
@@ -245,6 +309,8 @@ def _foto_wikimedia(nome: str, destino: Path) -> bool:
             if _arquivo_ruim(arquivo, pedido):
                 print(f"   '{nome}' ({lingua}) só tem logo/brasão/mapa ({arquivo}); procurando foto de verdade")
                 continue
+            if pessoa:  # não repetir sempre o mesmo retrato oficial: alterna entre fotos reais da pessoa
+                arquivo = _escolher_foto_pessoa(nome, arquivo)
             info = requests.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=30, params={
                 "action": "query", "titles": f"File:{arquivo}", "prop": "imageinfo",
                 "iiprop": "url|extmetadata", "iiurlwidth": 1920, "format": "json"}).json()

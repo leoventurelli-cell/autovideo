@@ -1,0 +1,234 @@
+name: Vídeo diário
+
+on:
+  schedule:
+    # O GitHub costuma atrasar (e às vezes pula) os horários agendados. Por isso o sistema
+    # "acorda" a cada 20 minutos e o passo "decidir" vê se já passou da hora e se o vídeo
+    # do dia ainda não saiu: Short a partir das 09:00 e vídeo longo a partir das 18:00 (Brasília).
+    # Quando não há nada a fazer, a execução termina em segundos.
+    - cron: "7,27,47 12-23 * * *"
+    - cron: "7,27 0-2 * * *"
+  workflow_dispatch:   # botão "Run workflow" para rodar na hora
+    inputs:
+      formato:
+        description: "Formato do vídeo"
+        type: choice
+        options: [curto, longo]
+        default: curto
+      tema:
+        description: "Tema específico (opcional)"
+        required: false
+      publicar:
+        description: "Publicar nas redes? (desmarque para só gerar e baixar o vídeo)"
+        type: boolean
+        default: true
+      agendado:
+        description: "Uso interno do despertador (cron-job.org): 'sim' = decidir pelo horário"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  decidir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rodar: ${{ steps.d.outputs.rodar }}
+      formato: ${{ steps.d.outputs.formato }}
+      tipo: ${{ steps.d.outputs.tipo }}
+      slot: ${{ steps.d.outputs.slot }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            docs/videos.json
+            docs/radar.json
+          sparse-checkout-cone-mode: false
+      - id: d
+        env:
+          EVENTO: ${{ github.event_name }}
+          FORMATO_PEDIDO: ${{ github.event.inputs.formato }}
+          AGENDADO: ${{ github.event.inputs.agendado }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          HORA_SHORT: "09:00"
+          HORA_CURIOSO: "15:00"   # Short de curiosidade (perguntas que todo mundo quer saber)
+          RADAR: "11:30,13:30,20:30,22:00"   # radar: Short extra se um assunto estiver explodindo (máx. 2/dia)
+          RADAR_MAX: "2"
+          HORA_LONGO: "18:00"
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timedelta, timezone
+          agora = datetime.now(timezone(timedelta(hours=-3)))  # Brasília
+          saida = open(os.environ["GITHUB_OUTPUT"], "a")
+          if os.environ["EVENTO"] != "schedule" and os.environ.get("AGENDADO") != "sim":
+              saida.write(f"rodar=true\nformato={os.environ.get('FORMATO_PEDIDO') or 'curto'}\n")
+              raise SystemExit
+          if os.environ["EVENTO"] == "schedule":
+              # reserva: se já tem um vídeo sendo gerado (ou na fila), não dispara outro igual
+              import subprocess
+              try:
+                  r = subprocess.run(["gh", "run", "list", "-R", os.environ["REPO"], "--workflow", "diario.yml",
+                                      "--limit", "15", "--json", "databaseId,status"],
+                                     capture_output=True, text=True, timeout=60)
+                  ocupado = [x for x in json.loads(r.stdout or "[]") if str(x["databaseId"]) != os.environ["RUN_ID"]
+                             and x["status"] in ("in_progress", "queued", "waiting", "pending", "requested")]
+              except Exception as e:
+                  print("não consegui ver as execuções:", e); ocupado = []
+              if ocupado:
+                  print(f"{agora:%H:%M} Brasília → já tem vídeo sendo gerado; nada a fazer agora")
+                  saida.write("rodar=false\nformato=curto\n")
+                  raise SystemExit
+          try:
+              videos = json.load(open("docs/videos.json", encoding="utf-8"))
+          except Exception:
+              videos = []
+          hoje = agora.date().isoformat()
+          feito = lambda f, cur=False: any(v.get("formato") == f and bool(v.get("curiosidade")) == cur
+                                and not v.get("chamada_de") and not v.get("manual") and not v.get("alta")
+                                and str(v.get("data", "")).startswith(hoje) for v in videos)
+          hora = lambda h: agora.replace(hour=int(h[:2]), minute=int(h[3:]), second=0, microsecond=0)
+          # começa alguns minutos ANTES para o vídeo ficar pronto no horário
+          # (o Short leva ~6 min para gerar; o longo + Short, ~22 min)
+          formato, tipo = None, ""
+          if agora.hour < 23 or agora.minute < 30:
+              if agora >= hora(os.environ["HORA_SHORT"]) - timedelta(minutes=10) and not feito("curto"):
+                  formato = "curto"
+              elif agora >= hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26) and not feito("longo"):
+                  formato = "longo"
+              elif (agora >= hora(os.environ["HORA_CURIOSO"]) - timedelta(minutes=10) and not feito("curto", True)
+                    and agora < hora(os.environ["HORA_LONGO"]) - timedelta(minutes=26)):
+                  formato, tipo = "curto", "curiosidade"
+          slot = ""
+          if not formato and (agora.hour < 23 or agora.minute < 30):
+              try:
+                  radar = json.load(open("docs/radar.json", encoding="utf-8"))
+              except Exception:
+                  radar = {}
+              if radar.get("data") != hoje:
+                  radar = {"feitos": [], "videos": 0}
+              if int(radar.get("videos", 0)) < int(os.environ["RADAR_MAX"]):
+                  for s in os.environ["RADAR"].split(","):
+                      if s not in radar.get("feitos", []) and hora(s) <= agora < hora(s) + timedelta(minutes=90):
+                          formato, tipo, slot = "curto", "alta", s
+                          break
+          atraso = ""
+          if formato:
+              alvo = (hora(slot) if slot else
+                      hora(os.environ["HORA_CURIOSO" if tipo else "HORA_SHORT" if formato == "curto" else "HORA_LONGO"]))
+              atraso = f" ({int((agora - alvo).total_seconds() // 60)} min depois do horário)"
+          print(f"{agora:%H:%M} Brasília → " + (f"hora do vídeo {formato}{atraso}" if formato else "nada a fazer agora"))
+          saida.write(f"rodar={'true' if formato else 'false'}\nformato={formato or 'curto'}\ntipo={tipo}\nslot={slot}\n")
+          PY
+
+  video:
+    needs: decidir
+    if: needs.decidir.outputs.rodar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # um vídeo por vez: pedidos repetidos esperam na fila em vez de brigar ao salvar o painel
+    concurrency:
+      group: painel
+      cancel-in-progress: false
+    env:
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main   # pega o painel mais novo (um vídeo que esperou na fila não brigar ao salvar)
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar FFmpeg
+        timeout-minutes: 10
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            # 1ª opção: apt (com tempo limite); se o servidor do Ubuntu travar, usa a versão estática
+            if ! timeout 240 bash -c "sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg"; then
+              echo "apt lento: baixando FFmpeg estático"
+              curl -sSL --retry 3 -o /tmp/ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+              mkdir -p /tmp/ffmpeg && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1
+              sudo cp /tmp/ffmpeg/ffmpeg /tmp/ffmpeg/ffprobe /usr/local/bin/
+            fi
+          fi
+          ffmpeg -hide_banner -filters | grep -q " ass " && echo "FFmpeg ok (com legendas)"
+          mkdir -p fontes
+          [ -f fontes/Poppins-Bold.ttf ] || curl -sSL -o fontes/Poppins-Bold.ttf \
+            https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Gerar e publicar
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          YT_CLIENT_ID: ${{ vars.YT_CLIENT_ID || secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY || secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          # Configurações sem segredo ficam em Settings → Variables
+          NICHO: ${{ vars.NICHO }}
+          CANAL: ${{ vars.CANAL }}
+          VOZ: ${{ vars.VOZ }}
+          YT_PRIVACIDADE: ${{ vars.YT_PRIVACIDADE }}
+          TIKTOK_MODO: ${{ vars.TIKTOK_MODO }}
+          PUBLICAR_YOUTUBE: ${{ vars.PUBLICAR_YOUTUBE }}
+          PUBLICAR_TIKTOK: "sim"  # Shorts vão para a caixa de entrada do TikTok; o usuário só toca em Publicar
+          TEMA: ${{ github.event.inputs.tema }}
+          AGENDADO: ${{ github.event.inputs.agendado }}
+          FORMATO: ${{ needs.decidir.outputs.formato }}
+          TIPO: ${{ needs.decidir.outputs.tipo }}
+          SLOT: ${{ needs.decidir.outputs.slot }}
+          SO_GERAR: ${{ github.event.inputs.publicar == 'false' }}
+        run: |
+          ARGS=()
+          [ -n "$TEMA" ] && ARGS+=(--tema "$TEMA")
+          [ "$SO_GERAR" = "true" ] && ARGS+=(--sem-publicar)
+          python main.py "${ARGS[@]}"
+
+      - name: Publicar o MP4 para download (link direto no painel)
+        if: always() && hashFiles('saida/release.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json, subprocess
+          d = json.load(open("saida/release.json"))
+          open("notas.md", "w").write(d["legenda"])
+          subprocess.run(["gh", "release", "create", d["tag"], *d["arquivos"],
+                          "--title", d["titulo"], "--notes-file", "notas.md", "--latest=false"], check=True)
+          PY
+
+      - name: Novas sugestões de tema para o painel
+        if: always()
+        continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NICHO: ${{ vars.NICHO }}
+          YT_CLIENT_ID: ${{ vars.YT_CLIENT_ID || secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+        run: python sugerir.py
+
+      - name: Salvar histórico e painel
+        if: always()
+        run: |
+          git config user.name "autovideo-bot"
+          git config user.email "autovideo-bot@users.noreply.github.com"
+          for f in historico.json fotos_usadas.json temas.txt docs/videos.json docs/radar.json docs/config.json docs/sugestoes.json tiktok.token youtube.token; do
+            [ -e "$f" ] && git add "$f"
+          done
+          [ -d docs/tiktok ] && git add -A docs/tiktok  # cópias leves dos Shorts para o celular
+          git diff --cached --quiet || (git commit -m "novo vídeo" && git pull --rebase && git push)
